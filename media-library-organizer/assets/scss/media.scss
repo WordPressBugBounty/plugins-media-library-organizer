@@ -1,0 +1,318 @@
+/**
+ * Feather Icons
+ */
+.media-library-organizer-feather-image {
+	background: url(../../_modules/dashboard/assets/feather/image.svg) transparent no-repeat scroll 0 0;
+    background-size: 16px 16px;
+	width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: text-top;
+}
+
+/**
+* Selectize
+*/
+div.selectize-control {
+	display: inline-block;
+	min-width: 160px;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+/**
+* Attachment Editor / Selection
+*/
+form.compat-item {
+	table.compat-attachment-fields {
+		p.help {
+			margin: 0;
+		}
+		tr {
+			/**
+			* Header
+			*/
+			th {
+				display: block;
+				width: 100%;
+				margin: 5px 0 0 0;
+				padding: 5px 0 0 0;
+				border: none; /* Overide Theme styles on Frontend Page Builders */
+				border-top: 1px solid #ddd;
+				
+				label {
+					span {
+						text-align: left;
+						font-weight: 600;
+					}
+				}
+			}
+		
+			/**
+			* Taxonomy Terms
+			*/
+			td.field  {
+				clear: both;
+				float: left;
+				width: 100%;
+				margin: 0;
+				border: none; /* Overide Theme styles on Frontend Page Builders */
+
+				div.categorydiv {
+					/**
+					 * Style Taxonomy selectors when WordPress media-views CSS isn't loaded
+					 * for e.g. frontend Page Builders
+					 */
+					div.tabs-panel {
+						margin-top: -2px;
+						min-height: 42px;
+					    max-height: 200px;
+					    overflow: auto;
+					    padding: 0 .9em;
+					    border: solid 1px #ddd;
+					    background-color: #fdfdfd;
+
+					    ul.categorychecklist {
+					    	list-style: none;
+					    	margin: 15px 0;
+					    	padding: 0;
+
+					    	li {
+					    		line-height: 1.7;
+					    	}
+
+					    	ul {
+					    		margin-left: 18px;
+					    	}
+					    }
+					}
+
+					/**
+					 * Add New Taxonomy Term
+					 */
+					#mlo-taxonomy-term-add {
+						.mlo-taxonomy-term-add-fields {
+							display: grid;
+							grid-gap: 10px;
+							grid-template-columns: 4fr 1fr;
+
+							&.hidden {
+								display: none;
+							}
+						}
+					}
+
+					/**
+					* Checkboxes
+					*/
+					input[type="checkbox"] {
+						margin: 0 3px 0 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * List View
+ * - Ensure Quick Action fills table column on smaller resolutions / when Tree View enabled
+ */
+table.media {
+	.column-title {
+		.has-media-icon~.row-actions {
+			clear: both;
+			margin-left: 0;
+		}
+	}
+}
+
+/**
+ * List and Grid View: Improve layout of Search Box
+ */
+#posts-filter .search-form,
+.media-frame-content .attachments-browser .media-toolbar-primary.search-form,
+.media-modal-content .attachments-browser .media-toolbar-primary.search-form {
+	display: grid;
+	column-gap: 10px;
+	row-gap: 10px;
+	box-sizing: border-box;
+	margin: 10px 0;
+
+	max-width: 33%;
+	width: 33%;
+	grid-template-columns: 1fr 4fr;
+	grid-template-rows: 32px;
+	grid-template-areas: 
+		"searchlabel search";
+
+	label.media-search-input-label {
+		position: static !important;
+		line-height: 32px;
+		text-align: right;
+		grid-area: searchlabel;
+	}
+	input#media-search-input {
+		grid-area: search;
+		width: 100% !important;
+		margin: 0;
+		height: 32px;
+		line-height: 32px;
+	}
+}
+
+/**
+ * Grid View: Add padding below filters
+ */
+.media-frame-content .attachments-browser .media-toolbar-secondary,
+.media-modal-content .attachments-browser .media-toolbar-secondary {
+	padding-bottom: 10px;
+}
+
+/**
+ * Grid View: Modal
+ * - Adjust widths of items so that all filters display
+ * - Increase the height of the Media Toolbar, to accommodate additional filters
+ */
+.media-modal-content {
+	/**
+	 * Prevent Themes from overriding WordPress media-views styling
+	 * for a better user experience
+	 */
+	.media-frame-title {
+		h1 {
+			&:before {
+				content: "";
+				margin: 0;
+			}
+		}
+	}
+	.media-attachments-filter-heading {
+		&:before {
+			content: "";
+			margin: 0;
+		}
+	}
+
+	/**
+	 * Set <select> widths to auto, so we can add as many
+	 * filters as we like
+	 */
+	.media-frame {
+		.media-toolbar {
+			select.attachment-filters {
+				width: auto !important;
+			}
+		}
+	}
+
+	/**
+	 * Attachments Browser
+	 */
+	.attachments-browser {
+		.media-toolbar {
+			height: auto;
+			background-color: #f3f3f3;
+			border-bottom: 1px solid #ddd;
+		}
+
+		/**
+		 * Toolbar Widths
+		 */
+		.media-toolbar-secondary {
+			max-width: 66%;
+			width: 66%;
+
+			h2 {
+				display: none;
+			}
+
+			select {
+				margin-top: 10px;
+			}
+		}
+	}
+
+	/**
+	 * Backbone Modal: Blank Content + Sidebar Layout
+	 */
+	.media-content {
+		position: absolute;
+		left: 0;
+		padding: 20px;
+
+		&.has-sidebar {
+			right: 300px;
+		}
+
+		/**
+		 * Form Fields
+		 */
+		.media-library-organizer-modal-content-field {
+			padding: 0 0 20px 0;
+
+			&.columns {
+				display: grid;
+				grid-gap: 10px;
+			}
+			&.columns-2 {
+				grid-template-columns: repeat(2, 50%);
+			}
+			&.columns-3 {
+				grid-template-columns: repeat(3, 33%);
+			}
+			&.columns-4 {
+				grid-template-columns: repeat(4, 25%);
+			}
+
+			label {
+				display: block;
+				font-size: 15px;
+				margin: 0 0 5px 0;
+			}
+			input, select {
+				font-size: 15px;
+			}
+		}
+	} 
+}
+
+/**
+ * Grid and List View: Search Filters: On smaller screens, make primary and secondary
+ * toolbars full width
+ */
+@media only screen and (max-width: 1000px) {
+	#posts-filter .search-form,
+	.media-frame-content .attachments-browser .media-toolbar-primary.search-form,
+	.media-modal-content .attachments-browser .media-toolbar-primary.search-form {
+		max-width: 100%;
+		width: 100%;
+		grid-template-columns: 50px auto;
+		grid-template-rows: 32px;
+		grid-template-areas: 
+			"searchlabel search"
+	}
+	.media-frame-content .attachments-browser .media-toolbar-secondary,
+	.media-modal-content .attachments-browser .media-toolbar-secondary {
+		max-width: 100%;
+		width: 100%;
+		height: auto;
+	}
+}
+
+/**
+* Selectize
+*/
+@media only screen and (max-width: 782px) {
+	div.media-library-organizer-selectize,
+	div.media-library-organizer-selectize-search {
+		width: 200px;
+
+		.selectize-input {
+			min-height: 40px;
+			font-size: 16px;
+			line-height: 1.625;
+			padding: 5px 24px 5px 8px;
+		}
+	}
+}

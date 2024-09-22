@@ -1,0 +1,914 @@
+# Copyright (C) 2022 WP Media Library
+# This file is distributed under the same license as the Media Library Organizer plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Media Library Organizer 1.5.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/media-library-organizer\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2022-11-15T17:08:33+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.6.0\n"
+"X-Domain: media-library-organizer\n"
+
+#. Plugin Name of the plugin
+msgid "Media Library Organizer"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+msgid "https://wpmedialibrary.com"
+msgstr ""
+
+#. Description of the plugin
+msgid "Organize and Search your Media Library, quicker and easier."
+msgstr ""
+
+#. Author of the plugin
+msgid "WP Media Library"
+msgstr ""
+
+#: addons/tree-view/class-media-library-organizer-tree-view.php:53
+msgid "Tree View"
+msgstr ""
+
+#. translators: PHP class name
+#: addons/tree-view/class-media-library-organizer-tree-view.php:170
+msgid "Media Library Organizer: Tree View: Error: Could not load Plugin class <strong>%s</strong>"
+msgstr ""
+
+#: addons/tree-view/class-media-library-organizer-tree-view.php:180
+msgid "Media Library Organizer: Tree View: Error"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:91
+msgid "Add Child"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:95
+#: addons/tree-view/views/admin/media.php:20
+msgid "Edit"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:99
+#: addons/tree-view/views/admin/media.php:21
+#: views/admin/tinymce/fields/repeater.php:52
+msgid "Delete"
+msgstr ""
+
+#. translators: Taxonomy Name, Singular
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:122
+msgid "Enter a %s Name"
+msgstr ""
+
+#. translators: Taxonomy Name, Singular
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:131
+msgid "Edit %s Name"
+msgstr ""
+
+#. translators: Taxonomy Name, Singular
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:136
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:150
+msgid "You must select a %s first"
+msgstr ""
+
+#. translators: Taxonomy Name, Singular
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:145
+msgid "Delete %s?"
+msgstr ""
+
+#. translators: Number of attachments
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:186
+msgid "Categorized %s items"
+msgstr ""
+
+#. translators: Number of attachments
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:188
+msgid "Categorize %s items"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:189
+msgid "Categorize 1 item"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:358
+#: includes/global/class-media-library-organizer-common.php:111
+msgid "All"
+msgstr ""
+
+#: addons/tree-view/includes/global/class-media-library-organizer-tree-view-media.php:361
+#: includes/global/class-media-library-organizer-media.php:199
+#: includes/global/class-media-library-organizer-media.php:349
+msgid "(Unassigned)"
+msgstr ""
+
+#: addons/tree-view/views/admin/media.php:19
+#: includes/global/class-media-library-organizer-media.php:944
+#: includes/global/class-media-library-organizer-media.php:987
+#: views/admin/tinymce/fields/repeater.php:32
+msgid "Add"
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:13
+msgid "Tree View Settings"
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:16
+msgid "Display a Category Tree sidebar when viewing the Media Library."
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:22
+#: addons/tree-view/views/admin/settings.php:27
+#: addons/tree-view/views/admin/settings.php:44
+#: views/admin/settings-general.php:74
+#: views/admin/settings-general.php:101
+#: views/admin/settings-general.php:117
+msgid "Enabled"
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:30
+#: addons/tree-view/views/admin/settings.php:47
+#: views/admin/settings-general.php:75
+#: views/admin/settings-general.php:102
+#: views/admin/settings-general.php:118
+msgid "Disabled"
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:39
+msgid "Expand/Collapse"
+msgstr ""
+
+#: addons/tree-view/views/admin/settings.php:52
+msgid "If enabled, only top level Categories are displayed in the Tree View. Clicking the icon next to them will reveal Subcategories."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin-ajax.php:53
+msgid "Unauthorized."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin-ajax.php:61
+msgid "No settings data detected."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin-ajax.php:83
+#: includes/admin/class-media-library-organizer-admin.php:889
+msgid "Settings saved."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:278
+msgid "Saving"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:279
+msgid "Saved!"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:378
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:379
+msgid "Defines Plugin-wide settings for Media Library Organizer."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:431
+msgid "The requested administration screen does not exist"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:528
+msgid "Filters"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:534
+msgid "User Options"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:572
+msgid "Auto Categorization"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:579
+msgid "Bulk and Quick Edit"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:586
+msgid "Defaults"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:592
+msgid "EXIF"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:599
+msgid "IPTC"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:606
+msgid "Optimizer"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:613
+#: includes/admin/class-media-library-organizer-admin.php:782
+msgid "Output"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:620
+#: views/admin/import-enhanced-media-library.php:22
+msgid "Taxonomies"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:626
+msgid "ZIP and Unzip"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:728
+msgid "Auto Categorization Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:731
+msgid "Automatically categorize images uploaded through WordPress using image recognition with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:737
+msgid "Bulk and Quick Edit Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:740
+msgid "Bulk and Quick Edit Titles, Alt Tags, Captions, Descriptions, Categories, EXIF and IPTC metadata from the List and Grid Media Library Views with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:746
+msgid "Defaults Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:749
+msgid "Define Default Titles, Alt Tags, Captions, Descriptions and Categories for newly uploaded files where no data is specified with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:755
+msgid "EXIF Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:758
+msgid "Read, write and display EXIF image data with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:764
+msgid "IPTC Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:767
+msgid "Read, write and display IPTC image data, compatible with Google Image's Image Licenses, in %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:773
+msgid "Optimizer Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:776
+msgid "Convert image uploads to Google's webp format, and define the quality level to reduce file sizes and improve site loading times with %s Pro"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:785
+msgid "Display image previews on hover and determine the thumbnail image size the Media Library with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:791
+msgid "Taxonomy Manager"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:794
+msgid "Define additional Taxonomies that can be used for Attachments in the Media Library with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:800
+msgid "ZIP Settings"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/admin/class-media-library-organizer-admin.php:803
+msgid "Automatically unzip files when uploaded to the Media Library, and zip multiple Media Library files with %s Pro"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-admin.php:830
+msgid "Invalid nonce specified. Settings NOT saved."
+msgstr ""
+
+#. translators: HTTP response code
+#: includes/admin/class-media-library-organizer-api.php:236
+msgid "HTTP Code %s"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:68
+#: views/admin/import-enhanced-media-library.php:17
+msgid "Import from Enhanced Media Library"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:82
+#: views/admin/import-filebird.php:17
+msgid "Import from FileBird"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:93
+#: views/admin/import-folders.php:17
+msgid "Import from Folders (Premio)"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:104
+#: views/admin/import-happyfiles.php:17
+msgid "Import from HappyFiles"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:115
+#: views/admin/import-wp-media-folder.php:17
+msgid "Import from WP Media Folder"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:126
+#: views/admin/import-wicked-folders.php:17
+msgid "Import from Wicked Folders"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:150
+msgid "Supplied file is not a valid JSON settings file, or has become corrupt."
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:214
+msgid "Import from Enhanced Media Library: Please select at least one Taxonomy to import."
+msgstr ""
+
+#. translators: %1$s: Term name to create, %2$s: Error message from attempting to create term
+#: includes/admin/class-media-library-organizer-import.php:304
+msgid "Term Name: %1$s, Error: %2$s"
+msgstr ""
+
+#. translators: Errors when trying to import Terms from another Plugin
+#: includes/admin/class-media-library-organizer-import.php:323
+msgid "No Terms were imported, as the following errors were encountered: %s"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-import.php:330
+msgid "No Terms were imported"
+msgstr ""
+
+#. translators: %1$s: Attachment ID, %2$s: Term IDs to assign to Attachment ID, %3$s: Error message when trying to assign Terms to Attachment
+#: includes/admin/class-media-library-organizer-import.php:365
+msgid "Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s"
+msgstr ""
+
+#. translators: Errors encountered when trying to import and assign Terms to Attachments
+#: includes/admin/class-media-library-organizer-import.php:380
+msgid "Terms were imported, however some errors were encountered.  They may have no impact on the import, but you'll need to check: %s"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-tinymce.php:122
+#: includes/admin/class-media-library-organizer-tinymce.php:171
+#: includes/admin/class-media-library-organizer-tinymce.php:240
+msgid "Insert"
+msgstr ""
+
+#: includes/admin/class-media-library-organizer-tinymce.php:123
+#: includes/admin/class-media-library-organizer-tinymce.php:172
+#: includes/admin/class-media-library-organizer-tinymce.php:237
+#: views/admin/tinymce/modal-missing.php:20
+msgid "Cancel"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/class-media-library-organizer.php:78
+msgid "Thanks for using %s to organize your Media Library!"
+msgstr ""
+
+#. translators: %1$s: Plugin Name, %2$s: PHP class name
+#: includes/class-media-library-organizer.php:407
+msgid "%1$s: Error: Could not load Plugin class %2$s"
+msgstr ""
+
+#. translators: Plugin Name
+#: includes/class-media-library-organizer.php:420
+msgid "%s: Error"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-ajax.php:111
+msgid "Category does not exist, so cannot be deleted"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-ajax.php:160
+msgid "Term does not exist, so cannot be deleted"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-ajax.php:318
+msgid "The taxonomy_name or args[taxonomy_name] parameter must be included in the request."
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:112
+msgid "Any"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:140
+msgid "Above"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:141
+msgid "Below"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:142
+msgid "Above and Below"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:171
+msgid "All media items"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:178
+msgid "Unattached"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:179
+msgctxt "media items"
+msgid "Mine"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:209
+msgid "Attachment ID"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:210
+msgid "Author (Uploader)"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:211
+msgid "Date"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:212
+msgid "Filename"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:213
+msgid "Modified Date"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:214
+msgid "Uploaded to"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:215
+msgid "Title"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:216
+#: includes/global/class-media-library-organizer-dynamic-tags.php:62
+msgid "Uploaded Date"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:269
+msgid "Ascending (A-Z)"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:270
+msgid "Descending (Z-A)"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:322
+#: includes/global/class-media-library-organizer-common.php:351
+#: includes/global/class-media-library-organizer-common.php:375
+#: includes/global/class-media-library-organizer-common.php:386
+msgid "None"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:323
+msgid "Left"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:324
+msgid "Center"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:325
+msgid "Right"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:352
+#: includes/global/class-media-library-organizer-common.php:376
+#: includes/global/class-media-library-organizer-common.php:387
+msgid "Media File"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:353
+#: includes/global/class-media-library-organizer-common.php:377
+#: includes/global/class-media-library-organizer-common.php:388
+msgid "Attachment Page"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:354
+msgid "Custom URL"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:364
+msgid "Link to Media File"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:365
+msgid "Embed Media Player"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:366
+msgid "Link to Attachment Page"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:420
+msgid "Thumbnail"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:421
+msgid "Medium"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:422
+msgid "Large"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-common.php:423
+msgid "Full Size"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:53
+msgid "File Name"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:54
+msgid "File Name, Prettified"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:55
+msgid "File Extension"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:56
+msgid "File Type"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:57
+msgid "File Extension and Type"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:58
+msgid "File Size"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:59
+msgid "Image Width and Height"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:60
+msgid "Image Width"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:61
+msgid "Image Height"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:63
+msgid "Uploaded Time"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:64
+msgid "Uploaded Date and Time"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:67
+msgid "Author Login"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:68
+msgid "Author Nice Name"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:69
+msgid "Author Email"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:70
+msgid "Author URL"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:71
+msgid "Author Display Name"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:72
+msgid "Author Meta Field"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-dynamic-tags.php:192
+#: includes/global/class-media-library-organizer-dynamic-tags.php:193
+#: includes/global/class-media-library-organizer-dynamic-tags.php:194
+msgid "pixels"
+msgstr ""
+
+#. translators: Folder path and name
+#: includes/global/class-media-library-organizer-filesystem.php:138
+#: includes/global/class-media-library-organizer-filesystem.php:163
+msgid "Could not create temporary folder at %s"
+msgstr ""
+
+#. translators: %1$s: Folder Name, %2$s: WordPress Uploads Folder Path
+#: includes/global/class-media-library-organizer-filesystem.php:207
+msgid "Cannot delete %1$s, as it is not within %2$s."
+msgstr ""
+
+#. translators: Folder Name
+#: includes/global/class-media-library-organizer-filesystem.php:221
+msgid "Unable to delete %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Plural
+#: includes/global/class-media-library-organizer-media.php:196
+#: includes/global/class-media-library-organizer-taxonomies.php:86
+msgid "All %s"
+msgstr ""
+
+#. translators: %s: Add New taxonomy label.
+#: includes/global/class-media-library-organizer-media.php:940
+msgid "+ %s"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-media.php:974
+msgctxt "tag delimiter"
+msgid ","
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:89
+msgid "Images"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:90
+msgid "Videos"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:91
+msgid "Audio"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:92
+msgid "Text"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:93
+msgid "Documents"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:94
+msgid "Spreadsheets"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:95
+msgid "Presentations"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:96
+msgid "Archives"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-mime.php:97
+msgid "Other"
+msgstr ""
+
+#. translators: Taxonomy Label, Plural
+#: includes/global/class-media-library-organizer-taxonomies.php:84
+msgid "Search %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:88
+msgid "Parent %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:90
+msgid "Parent %s:"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:92
+msgid "Edit %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:94
+msgid "Update %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:96
+msgid "Add New %s"
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: includes/global/class-media-library-organizer-taxonomies.php:98
+msgid "New %s"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-taxonomies.php:156
+msgid "Media Categories"
+msgstr ""
+
+#: includes/global/class-media-library-organizer-taxonomies.php:157
+msgid "Media Category"
+msgstr ""
+
+#: views/admin/import-enhanced-media-library.php:41
+msgid "Select the Taxonomies to import.  The Terms from the chosen Enhanced Media Library Taxonomies above will be imported into Media Library Organizer's Media Categories Taxonomy."
+msgstr ""
+
+#: views/admin/import-enhanced-media-library.php:47
+#: views/admin/import-filebird.php:33
+#: views/admin/import-folders.php:33
+#: views/admin/import-happyfiles.php:33
+#: views/admin/import-wicked-folders.php:33
+#: views/admin/import-wp-media-folder.php:33
+#: views/admin/settings-import-export.php:38
+#: views/admin/settings-import-export.php:54
+#: views/admin/settings-import-export.php:87
+msgid "Import"
+msgstr ""
+
+#: views/admin/import-filebird.php:23
+msgid "FileBird's folders (categories) will be imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-filebird.php:27
+msgid "Attachments assigned to FileBird folders will be reassigned to the equivalent Categories imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-folders.php:23
+msgid "Folder's folders (categories) will be imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-folders.php:27
+msgid "Attachments assigned to Folder's folders will be reassigned to the equivalent Categories imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-happyfiles.php:23
+msgid "HappyFiles's folders (categories) will be imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-happyfiles.php:27
+msgid "Attachments assigned to HappyFiles folders will be reassigned to the equivalent Categories imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-wicked-folders.php:23
+msgid "Wicked Folder's folders (categories) will be imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-wicked-folders.php:27
+msgid "Attachments assigned to Wicked Folder's folders will be reassigned to the equivalent Categories imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-wp-media-folder.php:23
+msgid "WP Media Folder's folders (categories) will be imported into Media Library Organizer."
+msgstr ""
+
+#: views/admin/import-wp-media-folder.php:27
+msgid "Attachments assigned to WP Media Folder's folders will be reassigned to the equivalent Categories imported into Media Library Organizer."
+msgstr ""
+
+#. translators: Plugin Name
+#: views/admin/settings-general-upgrade.php:20
+msgid "Filter by mutiple Categories and specific File Types with %s Pro"
+msgstr ""
+
+#: views/admin/settings-general-upgrade.php:28
+#: views/admin/settings-upgrade.php:29
+msgid "Upgrade"
+msgstr ""
+
+#: views/admin/settings-general.php:42
+msgid "Pro"
+msgstr ""
+
+#: views/admin/settings-general.php:59
+msgid "Filter Settings"
+msgstr ""
+
+#: views/admin/settings-general.php:61
+msgid "Determines which filters should be displayed on list and grid Media Library views."
+msgstr ""
+
+#. translators: Taxonomy Label, Singular
+#: views/admin/settings-general.php:83
+msgid "If enabled, displays a dropdown option to filter Media Library items by %s"
+msgstr ""
+
+#: views/admin/settings-general.php:97
+#: views/admin/settings-general.php:143
+msgid "Sorting"
+msgstr ""
+
+#: views/admin/settings-general.php:106
+msgid "If enabled, displays a dropdown option to select how to order Media Library items"
+msgstr ""
+
+#: views/admin/settings-general.php:113
+#: views/admin/settings-general.php:159
+msgid "Sort Order"
+msgstr ""
+
+#: views/admin/settings-general.php:122
+msgid "If enabled, displays a dropdown option to select whether to order Media Library items ascending or descending"
+msgstr ""
+
+#: views/admin/settings-general.php:135
+msgid "User Settings"
+msgstr ""
+
+#: views/admin/settings-general.php:137
+msgid "Determines which filter settings should persist across different screens for the logged in WordPress User."
+msgstr ""
+
+#: views/admin/settings-general.php:147
+#: views/admin/settings-general.php:163
+msgid "Remember"
+msgstr ""
+
+#: views/admin/settings-general.php:148
+#: views/admin/settings-general.php:164
+msgid "Don't Remember"
+msgstr ""
+
+#: views/admin/settings-general.php:152
+msgid "When set to Remembered, the User's last chosen Order By filter option will be remembered across all Media Views.  When set to Don't Remember, the filters will reset when switching between WordPress Administration screens."
+msgstr ""
+
+#: views/admin/settings-general.php:168
+msgid "When set to Remembered, the User's last chosen Order filter option will be remembered across all Media Views.  When set to Don't Remember, the filters will reset when switching between WordPress Administration screens."
+msgstr ""
+
+#: views/admin/settings-general.php:185
+msgid "Save"
+msgstr ""
+
+#: views/admin/settings-import-export.php:40
+msgid "Upload a JSON file generated by this Plugin's export functionality.  This will overwrite any existing settings stored on this installation."
+msgstr ""
+
+#: views/admin/settings-import-export.php:46
+msgid "JSON File"
+msgstr ""
+
+#. translators: Import Source Name
+#: views/admin/settings-import-export.php:70
+msgid "Import from %s"
+msgstr ""
+
+#. translators: Import Source Name
+#: views/admin/settings-import-export.php:76
+msgid "Imports %s data found on this WordPress installation. This will overwrite any existing settings in this Plugin."
+msgstr ""
+
+#: views/admin/settings-import-export.php:100
+#: views/admin/settings-import-export.php:109
+#: views/admin/settings-import-export.php:110
+msgid "Export"
+msgstr ""
+
+#: views/admin/settings-import-export.php:102
+msgid "To export this Plugin's settings, click the Export button below."
+msgstr ""
+
+#: views/admin/settings-import-export.php:104
+msgid "You can then import the generated JSON file into another Plugin installation."
+msgstr ""
+
+#: views/admin/settings.php:35
+msgid "Documentation"
+msgstr ""
+
+#: views/admin/tinymce/fields/field.php:145
+msgid "No"
+msgstr ""
+
+#: views/admin/tinymce/fields/field.php:146
+msgid "Yes"
+msgstr ""
+
+#: views/admin/tinymce/fields/repeater.php:24
+msgid "Actions"
+msgstr ""
+
+#: views/admin/tinymce/modal-missing.php:15
+msgid "The shortcode could not be found. Check it is registered and its class initialized."
+msgstr ""

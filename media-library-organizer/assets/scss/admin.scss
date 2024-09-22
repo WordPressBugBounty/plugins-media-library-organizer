@@ -1,0 +1,84 @@
+#media-library-organizer {
+	/**
+	 * Feather Icons for Tabs
+	 */
+	ul.wpzinc-nav-tabs {
+		li {
+			/**
+			 * Settings: General + User Options
+			 */
+			&.general {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/filter.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.user {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/users.svg);
+					background-size: 16px 16px;
+				}
+			}
+
+			/**
+			 * Settings: Addons
+			 */
+			&.camera {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/camera.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.edit {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/edit.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.list {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/list.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.image {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/image.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.tag {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/tag.svg);
+					background-size: 16px 16px;
+				}
+			}
+			
+			/**
+			 * Import & Export
+			 */
+			&.minimize-2 {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/minimize-2.svg);
+					background-size: 16px 16px;
+				}
+			}
+			&.maximize-2 {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/maximize-2.svg);
+					background-size: 16px 16px;
+				}
+			}
+
+			/**
+			 * Fallback Icon for Tabs that don't specify an icon
+			 */
+			&.default {
+				a {
+					background-image: url(../../../_modules/dashboard/feather/settings.svg);
+					background-size: 16px 16px;
+				}
+			}
+		}
+	}
+}

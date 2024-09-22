@@ -1,0 +1,302 @@
+#media-library-organizer-tree-view {
+	display: none; /* Enabled by JS once moved into position */
+	will-change: min-height;
+
+	.media-library-organizer-tree-view-inner {
+		transform: translate(0, 0); /* For browsers don't support translate3d. */
+    	transform: translate3d(0, 0, 0);
+    	will-change: position, transform;
+	}
+}
+
+/**
+* Tree View
+*/
+#media-library-organizer-tree-view-list {
+	margin: 0;
+	padding: 0;
+
+	ul {
+		margin: 0;
+		padding: 0;
+
+		li {
+			position: relative;
+			margin: 0;
+			padding: 0;
+
+			/**
+			 * Unassigned Terms Link
+			 */
+			&.cat-item-unassigned {
+				margin: 0 0 20px 0;
+				padding: 0 0 10px 0;
+				border-bottom: 1px solid #e5e5e5;
+    			box-shadow: 0 1px 0 0 #f7f7f7;
+			}
+
+			/**
+			 * Selected Term
+			 */
+			&.current-cat > a {
+				background-color: #e5e5e5;
+				font-weight: 700;
+			}
+
+			/**
+			 * JSTree enabled
+			 */
+			&.jstree-node {
+				display: grid;
+				grid-template-columns: 20px auto;
+				
+				i.jstree-ocl {
+					display: inline-block;
+					width: 20px;
+					height: 38px;
+					margin: 0;
+					padding: 0;
+					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder.svg) center no-repeat;
+					background-size: 16px 16px;
+				}
+
+				&.jstree-closed {
+					> i.jstree-ocl {
+						background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder-plus.svg) center no-repeat;
+						background-size: 16px 16px;
+					}
+				}
+				&.jstree-open {
+					> i.jstree-ocl {
+						background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder-minus.svg) center no-repeat;
+						background-size: 16px 16px;
+					}
+				}
+
+				ul.jstree-children {
+					grid-column: span 2;
+					margin: 0 0 0 20px;
+				}
+			}
+
+			
+			/**
+			 * Category
+			 */
+			a {
+				position: relative;
+				display: block;
+				text-decoration: none;
+				margin: 0;
+				padding: 10px;
+				border-radius: 4px;
+				
+				&:hover {
+					background-color: #e5e5e5;
+				}
+
+				&.media-library-organizer-tree-view-edit,
+				&.media-library-organizer-tree-view-delete {
+					position: absolute;
+					display: inline-block;
+					top: 0;
+					min-width: 18px;
+					height: 18px;
+					line-height: 18px;
+					margin: 9px 0 0 0;
+					padding: 0;
+					font-size: 10px;
+					text-align: center;
+					text-indent: -9999px;
+				}
+
+				&.media-library-organizer-tree-view-delete {
+					right: 35px;
+					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/trash-2.svg) 50% 50% no-repeat;
+					background-size: 18px 18px;
+				}
+
+				&.media-library-organizer-tree-view-edit {
+					right: 60px;
+					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/edit.svg) 50% 50% no-repeat;
+					background-size: 18px 18px;
+				}
+			}
+
+			.count {
+				position: absolute;
+				display: inline-block;
+				top: 0;
+				right: 10px;
+				min-width: 18px;
+				height: 18px;
+				line-height: 18px;
+				margin: 9px 0 0 0;
+				border: 1px solid #ccc;
+				background: #fff;
+				font-size: 10px;
+				text-align: center;
+				border-radius: 4px;
+				color: #000;
+				text-decoration: none;
+			}
+
+			ul.children {
+				margin: 0 0 0 20px;
+			}
+		}
+	}
+}
+
+/**
+* Media Library
+* - Define two column layout when Tree View enabled on the Media screen
+*/
+.media-library-organizer-tree-view {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+
+	/**
+	 * Tree View
+	 */
+	#media-library-organizer-tree-view {
+		display: none; /* Enabled by JS once moved into position */
+		width: 20%;
+		box-sizing: border-box;
+		padding: 0 10px 0 0;
+
+		/**
+		 * Set <h2> to match <h1> styling
+		 */
+		h2.wp-heading-inline {
+			float: left;
+			font-size: 23px;
+		    font-weight: 400;
+		    margin: 0;
+		    padding: 11px 0 4px 0;
+		    line-height: 1.3;
+		}
+
+		a.button {
+			float: right;
+			margin: 11px 0 0 0;
+		}
+
+		.wp-filter {
+			margin: 12px 0;
+
+			.search-form {
+				width: 100%;
+
+				button {
+					width: 32%;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Media Library
+	 */
+    .wrap {
+    	width: 80%;
+    	margin-top: 0;
+
+    	/**
+    	 * WP_List_Table List View: Move Column
+    	 */
+    	th#tree-view-move {
+			width: 20px;
+		}
+	}
+}
+
+/**
+* Context Menu
+*/
+ul.ui-contextmenu {
+	margin: 0;
+	padding: 0;
+	background-color: #fff;
+	box-shadow: 0 0 4px 0 rgba(0,0,0,0.25);
+	border-radius: 2px;
+
+	li.ui-menu-item {
+		margin: 0;
+		padding: 10px 20px;
+		cursor: pointer;
+
+		&:hover {
+			background-color: #e7e7e7;
+		}
+	}
+}
+
+/**
+* Drag and Drop
+*/
+#media-library-organizer-tree-view-draggable {
+	display: block;
+    z-index: 99999999;
+	background-color: rgba(0,0,0,0.8);
+	min-width: 120px;
+	margin: 0;
+	padding: 10px;
+	color: #fff;
+    cursor: move;
+    cursor: grab;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
+}
+.media-library-organizer-tree-view-droppable-hover {
+	background-color: #e5e5e5;
+}
+
+/**
+ * Responsive
+ */
+@media only screen and (max-width: 1300px) {
+	.media-library-organizer-tree-view {
+		#media-library-organizer-tree-view {
+			width: 25%;
+		}
+		.wrap {
+			width: 75%;
+		}
+	}
+}
+
+@media only screen and (max-width: 1100px) {
+	.media-library-organizer-tree-view {
+		#media-library-organizer-tree-view {
+			width: 30%;
+		}
+		.wrap {
+			width: 70%;
+		}
+	}
+}
+
+@media only screen and (max-width: 768px) {
+	.media-library-organizer-tree-view {
+		#media-library-organizer-tree-view {
+			width: 35%;
+
+			.wp-filter {
+				.search-form {
+					button {
+						width: 100%;
+					}
+				}
+			}
+		}
+		.wrap {
+			width: 65%;
+		}
+	}
+}
+
+@media only screen and (max-width: 480px) {
+	
+}
