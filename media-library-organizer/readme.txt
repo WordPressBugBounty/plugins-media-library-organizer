@@ -2,7 +2,7 @@
 Contributors: optimole, wpmedialibrary
 Tags: media categories, media library, media tags, images, organizer
 Requires at least: 5.0
-Tested up to: 6.6
+Tested up to: 6.7
 Requires PHP: 5.6
 Stable tag: 1.6.5
 License: GPLv2 or later
