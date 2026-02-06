@@ -3,7 +3,7 @@
  * Notices class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -249,7 +249,7 @@ class Media_Library_Organizer_Notices {
 		 *
 		 * @since   1.0.5
 		 *
-		 * @param   array   $notices    Success and Error Notices.
+		 * @param   mixed   $notices    Success and Error Notices.
 		 */
 		$notices = apply_filters( 'media_library_organizer_notices_get_notices', $notices );
 

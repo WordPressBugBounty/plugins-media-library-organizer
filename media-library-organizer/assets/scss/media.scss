@@ -2,7 +2,7 @@
  * Feather Icons
  */
 .media-library-organizer-feather-image {
-	background: url(../../_modules/dashboard/assets/feather/image.svg) transparent no-repeat scroll 0 0;
+	background: url('@/_modules/dashboard/feather/image.svg') transparent no-repeat scroll 0 0;
     background-size: 16px 16px;
 	width: 16px;
     height: 16px;
@@ -148,7 +148,6 @@ table.media {
 
 	label.media-search-input-label {
 		position: static !important;
-		line-height: 32px;
 		text-align: right;
 		grid-area: searchlabel;
 	}

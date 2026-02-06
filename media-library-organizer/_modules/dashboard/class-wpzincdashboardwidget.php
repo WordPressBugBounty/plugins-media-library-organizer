@@ -129,7 +129,6 @@ class WPZincDashboardWidget {
 		// Reviews.
 		if ( false !== $this->plugin->review_name ) {
 			add_action( 'wp_ajax_' . str_replace( '-', '_', $this->plugin->name ) . '_dismiss_review', array( $this, 'dismiss_review' ) );
-			add_action( 'admin_notices', array( $this, 'maybe_display_review_request' ) );
 			add_filter( 'admin_footer_text', array( $this, 'maybe_display_footer_review_request' ) );
 		}
 
@@ -363,7 +362,7 @@ class WPZincDashboardWidget {
 
 		// JS.
 		wp_register_script( 'wpzinc-admin-autocomplete-gutenberg', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'autocomplete-gutenberg' . ( $minified ? '-min' : '' ) . '.js', false, $this->plugin->version, true );
-		wp_register_script( 'wpzinc-admin-autocomplete', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'autocomplete' . ( $minified ? '-min' : '' ) . '.js', array( 'wpzinc-admin-tribute' ), $this->plugin->version, true );
+		wp_register_script( 'wpzinc-admin-autocomplete', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'autocomplete' . ( $minified ? '-min' : '' ) . '.js', array(), $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin-autosize', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'autosize' . ( $minified ? '-min' : '' ) . '.js', false, $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin-conditional', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'jquery.form-conditionals' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin-deactivation', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'deactivation' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
@@ -378,7 +377,6 @@ class WPZincDashboardWidget {
 		wp_register_script( 'wpzinc-admin-tags', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'tags' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin-tinymce-modal', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'tinymce-modal' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin-toggle', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'toggle' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
-		wp_register_script( 'wpzinc-admin-tribute', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'tribute' . ( $minified ? '-min' : '' ) . '.js', false, $this->plugin->version, true );
 		wp_register_script( 'wpzinc-admin', $this->dashboard_url . 'js/' . ( $minified ? 'min/' : '' ) . 'admin' . ( $minified ? '-min' : '' ) . '.js', array( 'jquery' ), $this->plugin->version, true );
 
 		// CSS.
@@ -625,41 +623,6 @@ class WPZincDashboardWidget {
 		}
 
 		wp_send_json_success( wp_remote_retrieve_body( $response ) );
-	}
-
-	/**
-	 * Displays a dismissible WordPress Administration notice requesting a review, if requested
-	 * by the main Plugin and the Review Request hasn't been disabled.
-	 *
-	 * @since   1.0.0
-	 */
-	public function maybe_display_review_request() {
-
-		// If the review request is disabled, bail.
-		if ( ! $this->show_review_request ) {
-			return;
-		}
-
-		// If we're not an Admin user, bail.
-		if ( ! function_exists( 'current_user_can' ) ) {
-			return;
-		}
-		if ( ! current_user_can( 'activate_plugins' ) ) {
-			return;
-		}
-
-		// If the review request was dismissed by the user, bail.
-		if ( $this->dismissed_review() ) {
-			return;
-		}
-
-		// If no review request has been set by the plugin, bail.
-		if ( ! $this->requested_review() ) {
-			return;
-		}
-
-		// If here, display the request for a review.
-		include_once $this->dashboard_folder . '/views/review-notice.php';
 	}
 
 	/**

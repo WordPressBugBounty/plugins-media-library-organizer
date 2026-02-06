@@ -5,7 +5,7 @@
  * @since   1.0.0
  *
  * @package Media_Library_Organizer
- * @author  WP Media Library
+ * @author  Themeisle
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

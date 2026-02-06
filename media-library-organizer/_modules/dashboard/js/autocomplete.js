@@ -5,6 +5,8 @@
  * @author WP Zinc
  */
 
+import Tribute from "tributejs";
+
 var wpzinc_autocompleters = [];
 
 /**
@@ -108,7 +110,13 @@ function wp_zinc_autocomplete_initialize() {
 			autocompleter.fields.forEach(
 				function ( field, j ) {
 
-					autocompleter.instance.attach( document.querySelectorAll( field ) );
+					document.querySelectorAll(field).forEach(function (el) {
+						// Prevent double binding
+						if (!el.dataset.tributeAttached) {
+							autocompleter.instance.attach(el);
+							el.dataset.tributeAttached = "true"; // Mark as initialized
+						}
+					});
 
 				}
 			);
@@ -146,3 +154,15 @@ function wp_zinc_autocomplete_destroy() {
 // Setup and initialize.
 wp_zinc_autocomplete_setup();
 wp_zinc_autocomplete_initialize();
+
+// Re-initialize autocomplete when browser content change.
+const observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function () {
+        wp_zinc_autocomplete_initialize();
+    });
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});

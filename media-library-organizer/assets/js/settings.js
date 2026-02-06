@@ -4,7 +4,7 @@
  * @since 	1.0.0
  *
  * @package Media_Library_Organizer
- * @author 	Media Library Organizer
+ * @author 	Themeisle
  */
 
 jQuery( document ).ready(

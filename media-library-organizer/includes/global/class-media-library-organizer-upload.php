@@ -3,7 +3,7 @@
  * Upload class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -34,8 +34,11 @@ class Media_Library_Organizer_Upload {
 		// Store base class.
 		$this->base = $base;
 
-		// Prepend the UI.
-		add_action( 'pre-upload-ui', array( $this, 'output_upload_ui' ) );
+		// Before the UI.
+		add_action( 'pre-upload-ui', array( $this, 'output_before_upload_ui' ) );
+
+		// After the UI.
+		add_action( 'post-upload-ui', array( $this, 'output_after_upload_ui' ) );
 
 		// Define the pluploader's options.
 		add_filter( 'plupload_init', array( $this, 'plupload_options' ) );
@@ -48,18 +51,29 @@ class Media_Library_Organizer_Upload {
 	}
 
 	/**
-	 * Allows Addons to output below the HTML and JS uploaders at Media > Add New
+	 * Allows Addons to output before the HTML and JS uploaders at Media > Add New
 	 *
 	 * @since   1.0.5
 	 */
-	public function output_upload_ui() {
+	public function output_before_upload_ui() {
 
 		/**
-		 * Allows Addons to output below the HTML and JS uploaders at Media > Add New
+		 * Allows Addons to output before the HTML and JS uploaders at Media > Add New
 		 *
 		 * @since   1.0.5
 		 */
-		do_action( 'media_library_organizer_upload_output_upload_ui' );
+		do_action( 'media_library_organizer_upload_output_before_upload_ui' );
+	}
+
+	/**
+	 * Allows Addons to output after the HTML and JS uploaders at Media > Add New
+	 */
+	public function output_after_upload_ui() {
+
+		/**
+		 * Allows Addons to output after the HTML and JS uploaders at Media > Add New
+		 */
+		do_action( 'media_library_organizer_upload_output_after_upload_ui' );
 	}
 
 	/**

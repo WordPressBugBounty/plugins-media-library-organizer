@@ -3,7 +3,7 @@
  * AJAX class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -34,151 +34,12 @@ class Media_Library_Organizer_AJAX {
 		// Store base class.
 		$this->base = $base;
 
-		add_action( 'wp_ajax_media_library_organizer_add_term', array( $this, 'add_term' ) );
-		add_action( 'wp_ajax_media_library_organizer_edit_term', array( $this, 'edit_term' ) );
-		add_action( 'wp_ajax_media_library_organizer_delete_term', array( $this, 'delete_term' ) );
 		add_action( 'wp_ajax_media_library_organizer_categorize_attachments', array( $this, 'categorize_attachments' ) );
 		add_action( 'wp_ajax_media_library_organizer_search_authors', array( $this, 'search_authors' ) );
 		add_action( 'wp_ajax_media_library_organizer_search_taxonomy_terms', array( $this, 'search_taxonomy_terms' ) );
 		add_action( 'wp_ajax_media_library_organizer_get_taxonomies_terms', array( $this, 'get_taxonomies_terms' ) );
 		add_action( 'wp_ajax_media_library_organizer_get_taxonomy_terms', array( $this, 'get_taxonomy_terms' ) );
-	}
-
-	/**
-	 * Adds a Term
-	 *
-	 * @since   1.1.1
-	 */
-	public function add_term() {
-
-		// Check nonce.
-		check_ajax_referer( 'media_library_organizer_add_term', 'nonce' );
-
-		// Get vars.
-		$taxonomy_name  = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
-		$term_name      = isset( $_REQUEST['term_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_name'] ) ) : '';
-		$term_parent_id = isset( $_REQUEST['term_parent_id'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_parent_id'] ) ) : '';
-		$term_id        = $this->base->get_class( 'taxonomies' )->create_term( $taxonomy_name, $term_name, $term_parent_id );
-
-		// Bail if Term ID is a WP_Error.
-		if ( is_wp_error( $term_id ) ) {
-			wp_send_json_error( $term_id->get_error_message() );
-		}
-
-		// Get Taxonomy and Term.
-		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
-		$term     = get_term_by( 'id', $term_id, $taxonomy_name );
-
-		// Return success with created Term, List View compatible dropdown filter and Grid View Edit Attachment checkbox reflecting changes.
-		wp_send_json_success(
-			array(
-				// The Created Term.
-				'term'            => $term,
-				// The List View <select> dropdown filter, reflecting the changes i.e. the new Term.
-				'dropdown_filter' => $this->base->get_class( 'media' )->get_list_table_category_filter( $taxonomy_name, $taxonomy->label ),
-				// The Grid View Edit Attachment <li> checkbox, which can be injected into the Edit Attachment Backbone modal.
-				'checkbox'        => $this->base->get_class( 'media' )->get_grid_edit_attachment_checkbox( $taxonomy_name, $term ),
-				// The Taxonomy.
-				'taxonomy'        => $taxonomy,
-				// All Terms.
-				'terms'           => $this->base->get_class( 'common' )->get_terms_hierarchical( $taxonomy_name ),
-			)
-		);
-	}
-
-	/**
-	 * Edit a Term
-	 *
-	 * @since   1.1.1
-	 */
-	public function edit_term() {
-
-		// Check nonce.
-		check_ajax_referer( 'media_library_organizer_edit_term', 'nonce' );
-
-		// Get vars.
-		$taxonomy_name = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
-		$term_id       = isset( $_REQUEST['term_id'] ) ? absint( $_REQUEST['term_id'] ) : 0;
-		$term_name     = isset( $_REQUEST['term_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_name'] ) ) : '';
-
-		// Get what will become the Old Term.
-		$old_term = get_term_by( 'id', $term_id, $taxonomy_name );
-
-		// Bail if the (Old) Term doesn't exist.
-		if ( ! $old_term ) {
-			wp_send_json_error( __( 'Category does not exist, so cannot be deleted', 'media-library-organizer' ) );
-		}
-
-		// Update Term.
-		$result = $this->base->get_class( 'taxonomies' )->update_term( $taxonomy_name, $term_id, $term_name );
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( $result->get_error_message() );
-		}
-
-		// Get Taxonomy.
-		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
-
-		// Return success with old term, edited Term and List View compatible dropdown filter reflecting changes.
-		wp_send_json_success(
-			array(
-				// Old Term.
-				'old_term'        => $old_term,
-				// New (Edited) Term.
-				'term'            => get_term_by( 'id', $term_id, $taxonomy_name ),
-				// The List View <select> dropdown filter, reflecting the changes i.e. the edited Term.
-				'dropdown_filter' => $this->base->get_class( 'media' )->get_list_table_category_filter( $taxonomy_name, $taxonomy->label ),
-				// The Taxonomy.
-				'taxonomy'        => $taxonomy,
-				// All Terms.
-				'terms'           => $this->base->get_class( 'common' )->get_terms_hierarchical( $taxonomy_name ),
-			)
-		);
-	}
-
-	/**
-	 * Delete a Term
-	 *
-	 * @since   1.1.1
-	 */
-	public function delete_term() {
-
-		// Check nonce.
-		check_ajax_referer( 'media_library_organizer_delete_term', 'nonce' );
-
-		// Get vars.
-		$taxonomy_name = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
-		$term_id       = isset( $_REQUEST['term_id'] ) ? absint( $_REQUEST['term_id'] ) : 0;
-
-		// Get Term.
-		$term = get_term_by( 'id', $term_id, $taxonomy_name );
-
-		// Bail if the Term doesn't exist.
-		if ( ! $term ) {
-			wp_send_json_error( __( 'Term does not exist, so cannot be deleted', 'media-library-organizer' ) );
-		}
-
-		// Delete Term.
-		$result = $this->base->get_class( 'taxonomies' )->delete_term( $taxonomy_name, $term_id );
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( $result->get_error_message() );
-		}
-
-		// Get Taxonomy.
-		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
-
-		// Return success with deleted Term and List View compatible dropdown filter reflecting changes.
-		wp_send_json_success(
-			array(
-				// Deleted Term.
-				'term'            => $term,
-				// The List View <select> dropdown filter, reflecting the changes i.e. the deleted Term.
-				'dropdown_filter' => $this->base->get_class( 'media' )->get_list_table_category_filter( $taxonomy_name, $taxonomy->label ),
-				// The Taxonomy.
-				'taxonomy'        => $taxonomy,
-				// All Terms.
-				'terms'           => $this->base->get_class( 'common' )->get_terms_hierarchical( $taxonomy_name ),
-			)
-		);
+		add_action( 'wp_ajax_media_library_organizer_add_term', array( $this, 'add_term' ) );
 	}
 
 	/**
@@ -373,6 +234,48 @@ class Media_Library_Organizer_AJAX {
 			array(
 				'taxonomy' => $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name ),
 				'terms'    => $this->base->get_class( 'common' )->get_terms_hierarchical( $taxonomy_name ),
+			)
+		);
+	}
+
+	/**
+	 * Adds a Term
+	 *
+	 * @since   1.1.1
+	 */
+	public function add_term() {
+
+		// Check nonce.
+		check_ajax_referer( 'media_library_organizer_add_term', 'nonce' );
+
+		// Get vars.
+		$taxonomy_name  = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
+		$term_name      = isset( $_REQUEST['term_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_name'] ) ) : '';
+		$term_parent_id = isset( $_REQUEST['term_parent_id'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_parent_id'] ) ) : '';
+		$term_id        = $this->base->get_class( 'taxonomies' )->create_term( $taxonomy_name, $term_name, $term_parent_id );
+
+		// Bail if Term ID is a WP_Error.
+		if ( is_wp_error( $term_id ) ) {
+			wp_send_json_error( $term_id->get_error_message() );
+		}
+
+		// Get Taxonomy and Term.
+		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
+		$term     = get_term_by( 'id', $term_id, $taxonomy_name );
+
+		// Return success with created Term, List View compatible dropdown filter and Grid View Edit Attachment checkbox reflecting changes.
+		wp_send_json_success(
+			array(
+				// The Created Term.
+				'term'            => $term,
+				// The List View <select> dropdown filter, reflecting the changes i.e. the new Term.
+				'dropdown_filter' => $this->base->get_class( 'media' )->get_list_table_category_filter( $taxonomy_name, $taxonomy->label ),
+				// The Grid View Edit Attachment <li> checkbox, which can be injected into the Edit Attachment Backbone modal.
+				'checkbox'        => $this->base->get_class( 'media' )->get_grid_edit_attachment_checkbox( $taxonomy_name, $term ),
+				// The Taxonomy.
+				'taxonomy'        => $taxonomy,
+				// All Terms.
+				'terms'           => $this->base->get_class( 'common' )->get_terms_hierarchical( $taxonomy_name ),
 			)
 		);
 	}

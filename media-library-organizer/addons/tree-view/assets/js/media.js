@@ -6,247 +6,11 @@
  * @since   1.0.0
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 var mediaLibraryOrganizerTreeViewGridSelectedAttachments,
 	mediaLibraryOrganizerTreeViewGridModified;
-
-/**
- * Enables the Context Menu on the Tree View
- *
- * @since   1.1.1
- */
-function mediaLibraryOrganizerTreeViewContextMenuInit() {
-
-	( function ( $ ) {
-		$( '#media-library-organizer-tree-view-list' ).contextmenu(
-			{
-				delegate:   '.cat-item',
-				menu:       media_library_organizer_tree_view.context_menu,
-				select:     function ( event, ui ) {
-					// Get selected Term ID and Name.
-					var term_id   = mediaLibraryOrganizerTreeViewGetTermIDFromElement( ui.target.parent() ),
-						term_name = mediaLibraryOrganizerTreeViewGetTermNameFromElement( ui.target );
-
-					switch ( ui.cmd ) {
-						case 'create_term':
-							mediaLibraryOrganizerTreeViewAddCategory( term_id );
-							break;
-
-						case 'edit_term':
-							mediaLibraryOrganizerTreeViewEditCategory( term_id, term_name );
-							break;
-
-						case 'delete_term':
-							mediaLibraryOrganizerTreeViewDeleteCategory( term_id, term_name );
-							break;
-
-						default:
-							// Fire the mlo:grid:tree-view:context-menu:{ui.cmd} event that Addons can hook into and listen.
-							let atts = {
-								'term_id': term_id,
-								'term_name': term_name
-							}
-							wp.media.events.trigger(
-								'mlo:grid:tree-view:context-menu:' + ui.cmd,
-								{
-									media_library_organizer_tree_view,
-									atts
-								}
-							);
-							break;
-					}
-				}
-			}
-		);
-
-	} )( jQuery );
-}
-
-/**
- * Add a Category
- *
- * @since   1.1.1
- *
- * @param 	int 	term_id 	Term ID.
- */
-function mediaLibraryOrganizerTreeViewAddCategory( term_id ) {
-
-	( function ( $ ) {
-
-		// Get Name.
-		var new_term_name = prompt( media_library_organizer_tree_view.actions.create_term.prompt );
-		if ( ! new_term_name || ! new_term_name.length ) {
-			return;
-		}
-
-		// Build args.
-		var args = {
-			'action':                media_library_organizer_tree_view.actions.create_term.action,
-			'nonce':                 media_library_organizer_tree_view.actions.create_term.nonce,
-			'taxonomy_name': 		 	 media_library_organizer_tree_view.taxonomy.name,
-			'term_name':             new_term_name,
-			'term_parent_id':        term_id
-		};
-		args[ media_library_organizer_tree_view.taxonomy.name ] = media_library_organizer_tree_view.selected_term;
-
-		// Send request.
-		$.post(
-			media_library_organizer_tree_view.ajaxurl,
-			args,
-			function ( response ) {
-
-				// Bail if an error occured.
-				if ( ! response.success ) {
-					alert( response.data );
-					return;
-				}
-
-				// Build attributes to send to wp.media.events.
-				var atts           = response.data;
-				atts.selected_term = media_library_organizer_tree_view.selected_term;
-				atts.media_view    = media_library_organizer_tree_view.media_view;
-
-				// Fire the mlo:grid:tree-view:added:term event that Addons can hook into and listen.
-				wp.media.events.trigger( 'mlo:grid:tree-view:added:term', atts );
-
-				// Reload Tree View.
-				mediaLibraryOrganizerTreeViewGet( atts.taxonomy.name, atts.selected_term );
-
-			}
-		);
-
-	} )( jQuery );
-
-}
-
-/**
- * Edits an existing Category.
- *
- * @since   1.1.1
- *
- * @param   int      term_id     Existing Category ID.
- * @param   string   term_name   Existing Category Name.
- */
-function mediaLibraryOrganizerTreeViewEditCategory( term_id, term_name ) {
-
-	( function ( $ ) {
-
-		// Bail if no Term ID specified.
-		if ( ! term_id ) {
-			alert( media_library_organizer_tree_view.actions.edit_term.no_selection );
-			return;
-		}
-
-		// Get Name.
-		var new_term_name = prompt( media_library_organizer_tree_view.actions.edit_term.prompt, term_name );
-		if ( ! new_term_name || ! new_term_name.length ) {
-			return;
-		}
-
-		// Build args.
-		var args = {
-			'action':                media_library_organizer_tree_view.actions.edit_term.action,
-			'nonce':                 media_library_organizer_tree_view.actions.edit_term.nonce,
-			'taxonomy_name': 		 media_library_organizer_tree_view.taxonomy.name,
-			'term_id':               term_id,
-			'term_name':             new_term_name,
-		};
-		args[ media_library_organizer_tree_view.taxonomy.name ] = media_library_organizer_tree_view.selected_term;
-
-		// Send request.
-		$.post(
-			media_library_organizer_tree_view.ajaxurl,
-			args,
-			function ( response ) {
-
-				// Bail if an error occured.
-				if ( ! response.success ) {
-					alert( response.data );
-					return;
-				}
-
-				// Build attributes to send to wp.media.events.
-				var atts           = response.data;
-				atts.selected_term = media_library_organizer_tree_view.selected_term;
-				atts.media_view    = media_library_organizer_tree_view.media_view;
-
-				// Fire the mlo:grid:tree-view:edited:term event that Addons can hook into and listen.
-				wp.media.events.trigger( 'mlo:grid:tree-view:edited:term', atts );
-
-				// Reload Tree View.
-				mediaLibraryOrganizerTreeViewGet( atts.taxonomy.name, atts.selected_term );
-
-			}
-		);
-
-	} )( jQuery );
-
-}
-
-/**
- * Deletes an existing Category
- *
- * @since   1.1.1
- *
- * @param   int      term_id     Existing Category ID.
- * @param   string   term_name   Existing Category Name.
- */
-function mediaLibraryOrganizerTreeViewDeleteCategory( term_id, term_name ) {
-
-	( function ( $ ) {
-
-		// Bail if no Term ID specified.
-		if ( ! term_id ) {
-			alert( media_library_organizer_tree_view.actions.delete_term.no_selection );
-			return;
-		}
-
-		// Confirm Deletion.
-		var result = confirm( media_library_organizer_tree_view.actions.delete_term.prompt + ' ' + term_name );
-		if ( ! result ) {
-			return;
-		}
-
-		// Build args.
-		var args = {
-			'action':                media_library_organizer_tree_view.actions.delete_term.action,
-			'nonce':                 media_library_organizer_tree_view.actions.delete_term.nonce,
-			'taxonomy_name': 		 media_library_organizer_tree_view.taxonomy.name,
-			'term_id':               term_id
-		};
-		args[ media_library_organizer_tree_view.taxonomy.name ] = media_library_organizer_tree_view.selected_term;
-
-		// Send request.
-		$.post(
-			media_library_organizer_tree_view.ajaxurl,
-			args,
-			function ( response ) {
-
-				// Bail if an error occured.
-				if ( ! response.success ) {
-					alert( response.data );
-					return;
-				}
-
-				// Build attributes to send to wp.media.events.
-				var atts           = response.data;
-				atts.selected_term = media_library_organizer_tree_view.selected_term;
-				atts.media_view    = media_library_organizer_tree_view.media_view;
-
-				// Fire the mlo:grid:tree-view:edited:term event that Addons can hook into and listen.
-				wp.media.events.trigger( 'mlo:grid:tree-view:deleted:term', atts );
-
-				// Reload Tree View.
-				mediaLibraryOrganizerTreeViewGet( atts.taxonomy.name, atts.selected_term );
-
-			}
-		);
-
-	} )( jQuery );
-
-}
 
 /**
  * Assign Attachment(s) to the given Category.
@@ -304,29 +68,6 @@ function mediaLibraryOrganizerTreeViewAssignAttachmentsToCategory( attachment_id
 }
 
 /**
- * Enables or disables contextual buttons for editing and deleting Categories.
- *
- * @since   1.1.1
- */
-function mediaLibraryOrganizerTreeViewContextualButtons() {
-
-	( function ( $ ) {
-
-		if ( $( '#media-library-organizer-tree-view-list .current-cat' ).length ) {
-			// Enable.
-			$( 'button.media-library-organizer-tree-view-edit' ).prop( 'disabled', false );
-			$( 'button.media-library-organizer-tree-view-delete' ).prop( 'disabled', false );
-		} else {
-			// Disable.
-			$( 'button.media-library-organizer-tree-view-edit' ).prop( 'disabled', true );
-			$( 'button.media-library-organizer-tree-view-delete' ).prop( 'disabled', true );
-		}
-
-	} )( jQuery );
-
-}
-
-/**
  * Fetch the Tree View HTML, injecting it into the container
  *
  * @since   1.1.1
@@ -355,14 +96,12 @@ function mediaLibraryOrganizerTreeViewGet( taxonomy_name, current_term ) {
 				// Destroy JSTree.
 				mediaLibraryOrganizerTreeViewDestroyJsTree();
 
-				// Inject Tree View into DOM.
-				$( '#media-library-organizer-tree-view-list' ).html( response.data );
+				// Trigger event to update the tree-view.
+				const event = new CustomEvent('mlo:tree-view:updated', {detail: response });
+                window.dispatchEvent(event);
 
 				// Init JSTree.
 				mediaLibraryOrganizerTreeViewInitJsTree();
-
-				// Enable or Disable Rename and Delete when a Category is selected.
-				mediaLibraryOrganizerTreeViewContextualButtons();
 
 				// Rebind Droppable.
 				mediaLibraryOrganizerTreeViewInitDroppable();
@@ -547,7 +286,7 @@ function mediaLibraryOrganizerTreeViewInitDroppable() {
 
 	( function ( $ ) {
 
-		$( '#media-library-organizer-tree-view-list li.cat-item a, #media-library-organizer-tree-view-list li.cat-item-unassigned a' ).droppable(
+		$( '#media-library-organizer-tree-view-list .cat-item, #media-library-organizer-tree-view-list .cat-item-unassigned' ).droppable(
 			{
 				hoverClass: 'media-library-organizer-tree-view-droppable-hover',
 				drop: function ( event, ui ) {
@@ -558,7 +297,7 @@ function mediaLibraryOrganizerTreeViewInitDroppable() {
 					}
 
 					// Get Term ID we dropped the items on.
-					var term_id = mediaLibraryOrganizerTreeViewGetTermIDFromElement( $( event.target ).parent() );
+					var term_id = mediaLibraryOrganizerTreeViewGetTermIDFromElement( $( event.target ) );
 
 					// Assign Attachments to Category.
 					mediaLibraryOrganizerTreeViewAssignAttachmentsToCategory( attachment_ids, term_id );
@@ -697,7 +436,15 @@ jQuery( document ).ready(
 		// Media Library Screen.
 		if ( $( 'body' ).hasClass( 'upload-php' ) ) {
 			// Move tree view into the wrapper.
-			$( '.wrap' ).wrap( '<div class="media-library-organizer-tree-view"></div>' );
+			let containerSelector = '';
+			if ( media_library_organizer_tree_view.media_view == 'grid' ) {
+				containerSelector = '.wrap:has(.media-frame.mode-grid)';
+			} else if ( media_library_organizer_tree_view.media_view == 'list' ) {
+				containerSelector = '.wrap:has(#posts-filter)';
+			}
+
+			$(containerSelector).wrap( '<div class="media-library-organizer-tree-view"></div>' );
+
 			$( '.media-library-organizer-tree-view' ).prepend( $( '#media-library-organizer-tree-view' ) );
 			$( '#media-library-organizer-tree-view' ).show();
 
@@ -710,11 +457,6 @@ jQuery( document ).ready(
 				}
 			);
 
-			// Setup right click context menu, if the User's role permits managing Categories.
-			if ( media_library_organizer_tree_view.context_menu != false ) {
-				mediaLibraryOrganizerTreeViewContextMenuInit();
-			}
-
 			// JSTree.
 			mediaLibraryOrganizerTreeViewInitJsTree();
 
@@ -722,64 +464,14 @@ jQuery( document ).ready(
 			mediaLibraryOrganizerTreeViewListInitDraggable();
 
 			// Droppable.
-			mediaLibraryOrganizerTreeViewInitDroppable();
-
-			// Enable or Disable Rename and Delete when a Category is selected.
-			mediaLibraryOrganizerTreeViewContextualButtons();
-
-			// Add Category.
-			$( 'body' ).on(
-				'click',
-				'.media-library-organizer-tree-view-add',
-				function ( e ) {
-
-					e.preventDefault();
-
-					// Get selected Term ID.
-					var term_id = mediaLibraryOrganizerTreeViewGetTermIDFromElement( $( '#media-library-organizer-tree-view-list .current-cat' ) );
-
-					// Add Category.
-					mediaLibraryOrganizerTreeViewAddCategory( term_id );
-
+			const mediaLibraryOrganizerCategorizedAttachmentObserver = new MutationObserver( mediaLibraryOrganizerTreeViewInitDroppable );
+			mediaLibraryOrganizerCategorizedAttachmentObserver.observe(
+				document.querySelector('#media-library-organizer-tree-view'),
+				{
+					childList: true,
+					subtree: true,
 				}
 			);
-
-			// Edit Category.
-			$( 'body' ).on(
-				'click',
-				'.media-library-organizer-tree-view-edit',
-				function ( e ) {
-
-					e.preventDefault();
-
-					// Get selected Term ID and Name.
-					var term_id = mediaLibraryOrganizerTreeViewGetTermIDFromElement( $( '#media-library-organizer-tree-view-list .current-cat' ) ),
-					term_name   = mediaLibraryOrganizerTreeViewGetTermNameFromElement( $( '#media-library-organizer-tree-view-list .current-cat a' ) );
-
-					// Edit Category.
-					mediaLibraryOrganizerTreeViewEditCategory( term_id, term_name );
-
-				}
-			);
-
-			// Delete Category.
-			$( 'body' ).on(
-				'click',
-				'.media-library-organizer-tree-view-delete',
-				function ( e ) {
-
-					e.preventDefault();
-
-					// Get selected Term ID and Name.
-					var term_id = mediaLibraryOrganizerTreeViewGetTermIDFromElement( $( '#media-library-organizer-tree-view-list .current-cat' ) ),
-					term_name   = mediaLibraryOrganizerTreeViewGetTermNameFromElement( $( '#media-library-organizer-tree-view-list .current-cat a' ) );
-
-					// Delete Category.
-					mediaLibraryOrganizerTreeViewDeleteCategory( term_id, term_name );
-
-				}
-			);
-
 		}
 
 	}

@@ -3,7 +3,7 @@
  * Admin class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -54,7 +54,13 @@ class Media_Library_Organizer_Admin {
 
 		// Addon Screens.
 		add_action( 'media_library_organizer_admin_output_settings_panel_general', array( $this, 'output_addon_settings_panel_general' ) );
-		add_action( 'media_library_organizer_admin_output_settings_panels', array( $this, 'output_addon_panels' ) );
+
+		add_action( 'created_term', array( $this, 'after_term_created' ), 10, 3 );
+		add_action( 'edited_term', array( $this, 'after_term_created' ), 10, 3 );
+		add_action( 'pre_delete_term', array( $this, 'after_term_deleted' ) );
+
+		// Survey data.
+		add_filter( 'themeisle-sdk/survey/mlo', array( $this, 'get_survey_data' ), 10, 2 );
 	}
 
 	/**
@@ -69,8 +75,6 @@ class Media_Library_Organizer_Admin {
 	public function maybe_request_review() {
 
 		if ( ! function_exists( 'Media_Library_Organizer_Pro' ) ) {
-			Media_Library_Organizer()->dashboard->request_review();
-		} elseif ( ! Media_Library_Organizer_Pro()->licensing->has_feature( 'whitelabelling' ) ) {
 			Media_Library_Organizer()->dashboard->request_review();
 		}
 	}
@@ -171,6 +175,12 @@ class Media_Library_Organizer_Admin {
 				return;
 			}
 		}
+
+		// If any page load media-editor, enqueue.
+		if ( wp_script_is( 'media-editor' ) ) {
+			$this->enqueue_scripts_css( 'media_editor', $screen, $screens, $mode, $ext );
+			return;
+		}
 	}
 
 	/**
@@ -257,9 +267,11 @@ class Media_Library_Organizer_Admin {
 		// JS.
 		wp_enqueue_script( 'wpzinc-admin-modal' );
 
+		wp_enqueue_script( 'thickbox' );
+		wp_enqueue_style( 'thickbox' );
 		// Plugin JS.
 		wp_enqueue_script( $this->base->plugin->name . '-selectize' );
-		wp_enqueue_script( $this->base->plugin->name . '-settings', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'settings' . ( $ext ? '-' . $ext : '' ) . '.js', array( 'jquery' ), $this->base->plugin->version, true );
+		wp_enqueue_script( $this->base->plugin->name . '-settings', $this->base->plugin->url . 'assets/build/settings.js', array(), $this->base->plugin->version, true );
 
 		// Localize.
 		wp_localize_script(
@@ -272,11 +284,87 @@ class Media_Library_Organizer_Admin {
 					'title'         => __( 'Saving', 'media-library-organizer' ),
 					'title_success' => __( 'Saved!', 'media-library-organizer' ),
 				),
+				'is_pro'               => function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid(),
+				'settings'             => $this->get_settings(),
+				'api'                  => rest_url( $this->base->plugin->namespace ),
+				'rest_nonce'           => wp_create_nonce( 'wp_rest' ),
+				'defaults'             => Media_Library_Organizer()->get_class( 'settings' )->get_settings( 'defaults' ),
+				'defaults_fields'      => apply_filters( 'media_library_organizer_defaults_fields', array() ),
+				'optimole_data'        => $this->get_optimole_data(),
 			)
 		);
+		wp_set_script_translations( $this->base->plugin->name . '-settings', 'media-library-organizer' );
 
 		// CSS.
 		wp_enqueue_style( 'wpzinc-admin-selectize' );
+	}
+
+	/**
+	 * Get settings.
+	 *
+	 * @return array
+	 */
+	private function get_settings() {
+		$settings = array(
+			'general'          => $this->base->get_class( 'settings' )->get_settings( 'general' ),
+			'user-options'     => $this->base->get_class( 'settings' )->get_settings( 'user-options' ),
+			'taxonomy-manager' => $this->base->get_class( 'taxonomies' )->get_taxonomies(),
+		);
+
+		return apply_filters( 'media_library_organizer_localize_settings', $settings );
+	}
+
+	/**
+	 * Get optimole data.
+	 *
+	 * @return array
+	 */
+	private function get_optimole_data() {
+		$data = get_transient( 'mlo_optimole_data' );
+
+		if ( empty( $data ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+
+			$data = plugins_api( 'plugin_information', array( 'slug' => 'optimole-wp' ) );
+
+			if ( ! is_wp_error( $data ) ) {
+				set_transient( 'mlo_optimole_data', $data, 12 * HOUR_IN_SECONDS );
+			}
+		}
+
+		if ( ! is_object( $data ) ) {
+			$data->num_ratings     = 612;
+			$data                  = (object) array();
+			$data->rating          = 94;
+			$data->active_installs = 200000;
+		}
+
+		$rating          = (int) $data->rating * 5 / 100;
+		$rating          = number_format( $rating, 1 );
+		$active_installs = number_format( $data->active_installs );
+
+		$installed = file_exists( WP_PLUGIN_DIR . '/optimole-wp/optimole-wp.php' );
+
+		return array(
+			'installed'      => $installed,
+			'active'         => is_plugin_active( 'optimole-wp/optimole-wp.php' ),
+			'logoURL'        => $this->base->plugin->url . 'assets/images/optimole-logo.png',
+			// translators: %1$s: rating, %2$d: number of reviews.
+			'ratingByline'   => sprintf( __( '%1$s out of 5 stars (%2$d reviews)', 'media-library-organizer' ), $rating, $data->num_ratings ),
+			// translators: %s: number of active installations.
+			'activeInstalls' => sprintf( __( '%s+ Active installations', 'media-library-organizer' ), $active_installs ),
+			'cta'            => $installed ? __( 'Activate Optimole', 'media-library-organizer' ) : __( 'Install Optimole', 'media-library-organizer' ),
+			'thickboxURL'    => add_query_arg(
+				array(
+					'tab'       => 'plugin-information',
+					'plugin'    => 'optimole-wp',
+					'TB_iframe' => 'true',
+					'width'     => '600',
+					'height'    => '500',
+				),
+				network_admin_url( 'plugin-install.php' )
+			),
+		);
 	}
 
 	/**
@@ -287,7 +375,7 @@ class Media_Library_Organizer_Admin {
 	public function enqueue_css_settings() {
 
 		// Enqueue CSS.
-		wp_enqueue_style( $this->base->plugin->name . '-admin', $this->base->plugin->url . '/assets/css/admin.css', array(), $this->base->plugin->version );
+		wp_enqueue_style( $this->base->plugin->name . '-admin', $this->base->plugin->url . '/assets/build/settings.css', array(), $this->base->plugin->version );
 	}
 
 	/**
@@ -296,11 +384,6 @@ class Media_Library_Organizer_Admin {
 	 * @since 1.0.0
 	 */
 	public function admin_menu() {
-
-		// Bail if we cannot access any menus.
-		if ( function_exists( 'Media_Library_Organizer_Access' ) && ! Media_Library_Organizer_Access()->can_access( 'show_menu' ) ) {
-			return;
-		}
 
 		// Get the registered screens.
 		$screens = $this->get_screens();
@@ -320,7 +403,14 @@ class Media_Library_Organizer_Admin {
 		$minimum_capability = apply_filters( 'media_library_organizer_admin_admin_menu_minimum_capability', $minimum_capability );
 
 		// Create the top level screen.
-		add_menu_page( $this->base->plugin->displayName, $this->base->plugin->displayName, $minimum_capability, $this->base->plugin->name, array( $this, 'admin_screen' ), 'dashicons-admin-media' );
+		$hook = add_menu_page( $this->base->plugin->displayName, $this->base->plugin->displayName, $minimum_capability, $this->base->plugin->name, array( $this, 'admin_screen' ), 'dashicons-admin-media' );
+
+		add_action(
+			'load-' . $hook,
+			function () {
+				do_action( 'themeisle_internal_page', 'mlo', 'dashboard' );
+			}
+		);
 
 		// Iterate through screens, adding as submenu items.
 		foreach ( (array) $screens as $screen ) {
@@ -333,24 +423,13 @@ class Media_Library_Organizer_Admin {
 				$access = 'settings';
 			}
 
-			// Skip if access isn't permitted, but always allow licensing and settings.
-			if ( 'settings' !== $access && function_exists( 'Media_Library_Organizer_Access' ) && '_pro' !== $access && ! Media_Library_Organizer_Access()->can_access( 'show_menu_' . $access ) ) {
-				continue;
-			}
-
 			// Add submenu page.
 			add_submenu_page( $this->base->plugin->name, $screen['label'], $screen['label'], $minimum_capability, $slug, array( $this, 'admin_screen' ) );
 		}
 
-		// Import and Export.
-		if ( ! function_exists( 'Media_Library_Organizer_Access' ) || Media_Library_Organizer_Access()->can_access( 'show_menu_import_export' ) ) {
-			do_action( 'media_library_organizer_admin_menu_import_export' );
-		}
+		do_action( 'media_library_organizer_admin_menu_import_export' );
 
-		// Support.
-		if ( ! function_exists( 'Media_Library_Organizer_Access' ) || Media_Library_Organizer_Access()->can_access( 'show_menu_support' ) ) {
-			do_action( 'media_library_organizer_admin_menu_support' );
-		}
+		do_action( 'media_library_organizer_admin_menu_support' );
 	}
 
 	/**
@@ -368,10 +447,10 @@ class Media_Library_Organizer_Admin {
 				'name'          => 'settings',
 				'label'         => __( 'Settings', 'media-library-organizer' ),
 				'description'   => __( 'Defines Plugin-wide settings for Media Library Organizer.', 'media-library-organizer' ),
-				'view'          => $this->base->plugin->folder . 'views/admin/settings-general.php',
 				'columns'       => 2,
 				'data'          => array(),
 				'documentation' => 'https://wpmedialibrary.com/documentation/media-library-organizer/setup/',
+				'type'          => 'settings',
 			),
 		);
 
@@ -521,97 +600,6 @@ class Media_Library_Organizer_Admin {
 	}
 
 	/**
-	 * Returns an array of Addon tabs, depending on the Plugin Screen being viewed.
-	 *
-	 * @since   1.1.0
-	 *
-	 * @param   string $screen     Screen.
-	 * @return  array               Tabs
-	 */
-	private function get_screen_addon_tabs( $screen ) {
-
-		// Define additional tabs.
-		$addon_tabs = array(
-			'auto-categorization' => array(
-				'name'          => 'auto-categorization',
-				'label'         => __( 'Auto Categorization', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/auto-categorization/setup',
-				'menu_icon'     => 'tag',
-				'is_pro'        => true,
-			),
-			'bulk-quick-edit'     => array(
-				'name'          => 'bulk-quick-edit',
-				'label'         => __( 'Bulk and Quick Edit', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/bulk-quick-edit/setup',
-				'menu_icon'     => 'edit',
-				'is_pro'        => true,
-			),
-			'defaults'            => array(
-				'name'          => 'defaults',
-				'label'         => __( 'Defaults', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/defaults/setup',
-				'is_pro'        => true,
-			),
-			'exif'                => array(
-				'name'          => 'exif',
-				'label'         => __( 'EXIF', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/exif/setup',
-				'menu_icon'     => 'camera',
-				'is_pro'        => true,
-			),
-			'iptc'                => array(
-				'name'          => 'iptc',
-				'label'         => __( 'IPTC', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/iptc/setup',
-				'menu_icon'     => 'camera',
-				'is_pro'        => true,
-			),
-			'optimizer'           => array(
-				'name'          => 'optimizer',
-				'label'         => __( 'Optimizer', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/optimizer/setup',
-				'menu_icon'     => 'image',
-				'is_pro'        => true,
-			),
-			'output'              => array(
-				'name'          => 'output',
-				'label'         => __( 'Output', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/output/setup',
-				'menu_icon'     => 'general',
-				'is_pro'        => true,
-			),
-			'taxonomy-manager'    => array(
-				'name'          => 'taxonomy-manager',
-				'label'         => __( 'Taxonomies', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/taxonomy-manager/setup',
-				'is_pro'        => true,
-			),
-			'zip'                 => array(
-				'name'          => 'zip',
-				'label'         => __( 'ZIP and Unzip', 'media-library-organizer' ),
-				'documentation' => $this->base->plugin->documentation_url . '/zip-unzip/setup',
-				'is_pro'        => true,
-			),
-		);
-
-		/**
-		 * Define Addon tabs in the Plugin Settings section.
-		 *
-		 * @since   1.1.0
-		 *
-		 * @param   array   $tabs       Settings Tabs.
-		 * @param   string  $screen     Current Screen Name to define Tabs for.
-		 */
-		$addon_tabs = apply_filters( 'media_library_organizer_admin_get_screen_addon_tabs', $addon_tabs, $screen );
-
-		// Sort additional tabs alphabetically.
-		ksort( $addon_tabs );
-
-		// Return.
-		return $addon_tabs;
-	}
-
-	/**
 	 * Output the Settings screen.
 	 * Save POSTed data from the Administration Panel into a WordPress option.
 	 *
@@ -637,8 +625,7 @@ class Media_Library_Organizer_Admin {
 		}
 
 		// Get the tabs for the given screen.
-		$tabs       = $this->get_screen_tabs( $screen['name'] );
-		$addon_tabs = $this->get_screen_addon_tabs( $screen['name'] );
+		$tabs = $this->get_screen_tabs( $screen['name'] );
 
 		// Get the current tab.
 		// If no tab specified, get the first tab.
@@ -647,8 +634,12 @@ class Media_Library_Organizer_Admin {
 		// Get Taxonomies.
 		$taxonomies = $this->base->get_class( 'taxonomies' )->get_taxonomies();
 
-		// Load View.
-		require_once $this->base->plugin->folder . '/views/admin/settings.php';
+		if ( isset( $screen['type'] ) ) {
+			echo '<div id="mlo-' . esc_attr( $screen['type'] ) . '"></div>';
+		} else {
+			// Load other View pages.
+			require_once $this->base->plugin->folder . '/views/admin/settings.php';
+		}
 
 		// Add footer action to output overlay modal markup.
 		add_action( 'admin_footer', array( $this, 'output_modal' ) );
@@ -674,101 +665,6 @@ class Media_Library_Organizer_Admin {
 
 		// Load View.
 		require_once $this->base->plugin->folder . '/views/admin/settings-general-upgrade.php';
-	}
-
-	/**
-	 * Outputs Settings Panel(s) for Addons.
-	 *
-	 * @since   1.1.0
-	 */
-	public function output_addon_panels() {
-
-		// Define Setting Panel(s) Titles and Descriptions.
-		$panels = array(
-			'auto-categorization' => array(
-				'title'       => __( 'Auto Categorization Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Automatically categorize images uploaded through WordPress using image recognition with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'bulk-quick-edit'     => array(
-				'title'       => __( 'Bulk and Quick Edit Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Bulk and Quick Edit Titles, Alt Tags, Captions, Descriptions, Categories, EXIF and IPTC metadata from the List and Grid Media Library Views with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'defaults'            => array(
-				'title'       => __( 'Defaults Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Define Default Titles, Alt Tags, Captions, Descriptions and Categories for newly uploaded files where no data is specified with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'exif'                => array(
-				'title'       => __( 'EXIF Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Read, write and display EXIF image data with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'iptc'                => array(
-				'title'       => __( 'IPTC Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Read, write and display IPTC image data, compatible with Google Image\'s Image Licenses, in %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'optimizer'           => array(
-				'title'       => __( 'Optimizer', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Effectively optimizes your images, resulting in faster loading times and better overall website performance with Optimole.', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'output'              => array(
-				'title'       => __( 'Output', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Display image previews on hover and determine the thumbnail image size the Media Library with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'taxonomy-manager'    => array(
-				'title'       => __( 'Taxonomy Manager', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Define additional Taxonomies that can be used for Attachments in the Media Library with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-
-			'zip'                 => array(
-				'title'       => __( 'ZIP Settings', 'media-library-organizer' ),
-				'description' => sprintf(
-					/* translators: Plugin Name */
-					__( 'Automatically unzip files when uploaded to the Media Library, and zip multiple Media Library files with %s Pro', 'media-library-organizer' ),
-					$this->base->plugin->displayName
-				),
-			),
-		);
-
-		// Load View.
-		require_once $this->base->plugin->folder . '/views/admin/settings-upgrade.php';
 	}
 
 	/**
@@ -872,5 +768,84 @@ class Media_Library_Organizer_Admin {
 	public function get_setting( $screen = '', $key = '' ) {
 
 		return $this->base->get_class( 'settings' )->get_setting( $screen, $key );
+	}
+
+	/**
+	 * Add created_at and modified_at after term create.
+	 *
+	 * @param int    $term_id       Term ID.
+	 * @param int    $taxonomy_id   Taxonomy ID.
+	 * @param string $taxonomy_name Taxonomy slug.
+	 */
+	public function after_term_created( $term_id, $taxonomy_id, $taxonomy_name ) {
+		$taxonomies     = $this->base->get_class( 'taxonomies' )->get_taxonomies();
+		$taxonomies_key = array_keys( $taxonomies );
+
+		if ( ! in_array( $taxonomy_name, $taxonomies_key, true ) ) {
+			return;
+		}
+
+		if ( ! get_term_meta( $term_id, '_created_at', true ) ) {
+			update_term_meta( $term_id, '_created_at', current_time( 'mysql' ) );
+		}
+
+		update_term_meta( $term_id, '_modified_at', current_time( 'mysql' ) );
+	}
+
+	/**
+	 * Run after term delete.
+	 *
+	 * @param int $term_id Term ID.
+	 */
+	public function after_term_deleted( $term_id ) {
+		$startup_folder = $this->base->get_class( 'settings' )->get_setting( 'output', 'startup_folder' );
+		$term           = get_term( $term_id );
+		if ( $startup_folder === $term->slug ) {
+			$this->base->get_class( 'settings' )->update_setting( 'output', 'startup_folder', '' );
+		}
+	}
+
+	/**
+	 * Get the data used for the survey.
+	 *
+	 * @param array  $data Existing survey data.
+	 * @param string $page_slug Current page slug.
+	 *
+	 * @return array
+	 * @see survey.js
+	 */
+	public function get_survey_data( $data, $page_slug ) {
+		if ( $page_slug !== 'dashboard' ) {
+			return $data;
+		}
+
+		$license_data        = get_option( 'media_library_organizer_pro_license_data', array() );
+		$user_id             = 'mlo_' . ( ! empty( $license_data->key ) ? $license_data->key : preg_replace( '/[^\w\d]*/', '', get_site_url() ) );
+		$product_key         = str_replace( '-', '_', $this->base->plugin->name );
+		$current_time        = time();
+		$install_date        = get_option( $product_key . '_install', $current_time );
+		$install_days_number = intval( ( $current_time - $install_date ) / DAY_IN_SECONDS );
+		$plan                = apply_filters( 'product_mlo_license_plan', 0 );
+		$plugin_version      = $this->base->plugin->version;
+
+		$attributes = array(
+			'free_version'        => $plugin_version,
+			'install_days_number' => $install_days_number,
+			'license_status'      => ! empty( $license_data->license ) ? $license_data->license : 'invalid',
+		);
+
+		if ( defined( 'MEDIA_LIBRARY_ORGANIZER_PRO_PLUGIN_VERSION' ) ) {
+			$attributes['pro_version'] = MEDIA_LIBRARY_ORGANIZER_PRO_PLUGIN_VERSION;
+		}
+
+		if ( ! empty( $plan ) ) {
+			$attributes['plan'] = $plan;
+		}
+
+		return array(
+			'environmentId' => 'cmg0it51g29x1x501gmd4bl58',
+			'userId'        => $user_id,
+			'attributes'    => $attributes,
+		);
 	}
 }

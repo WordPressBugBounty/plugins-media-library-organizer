@@ -6,5 +6,5 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    '30ee49088e7bc75d99b1c204cba2d6c5' => $vendorDir . '/codeinwp/themeisle-sdk/load.php',
+    'eac153790a0a93c0deda0d8b1d447b00' => $vendorDir . '/codeinwp/themeisle-sdk/load.php',
 );

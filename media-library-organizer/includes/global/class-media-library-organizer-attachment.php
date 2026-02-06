@@ -3,7 +3,7 @@
  * Attachment class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -254,8 +254,8 @@ class Media_Library_Organizer_Attachment {
 	 *
 	 * @since   1.0.5
 	 *
-	 * @param   string $taxonomy_name       Taxonomy Name.
-	 * @param   array  $terms               Media Categories.
+	 * @param   string       $taxonomy_name Taxonomy Name.
+	 * @param   array|string $terms         Media Categories.
 	 */
 	public function set_terms( $taxonomy_name, $terms ) {
 
@@ -303,8 +303,8 @@ class Media_Library_Organizer_Attachment {
 	 *
 	 * @since   1.1.1
 	 *
-	 * @param   string $taxonomy_name   Taxonomy Name.
-	 * @param   array  $terms          Terms.
+	 * @param   string       $taxonomy_name Taxonomy Name.
+	 * @param   array|string $terms  Terms.
 	 */
 	public function append_terms( $taxonomy_name, $terms ) {
 

@@ -13,6 +13,7 @@
 namespace ThemeisleSDK\Modules;
 
 use ThemeisleSDK\Common\Abstract_Module;
+use ThemeisleSDK\Loader;
 use ThemeisleSDK\Product;
 
 // Exit if accessed directly.
@@ -33,6 +34,13 @@ class Featured_Plugins extends Abstract_Module {
 	private $transient_key = 'themeisle_sdk_featured_plugins_';
 
 	/**
+	 * The current product instance.
+	 *
+	 * @var Product|null
+	 */
+	protected $product = null;
+
+	/**
 	 * Check if the module can be loaded.
 	 *
 	 * @param Product $product Product data.
@@ -44,9 +52,7 @@ class Featured_Plugins extends Abstract_Module {
 			return false;
 		}
 
-		$slug = $product->get_slug();
-		// only load for products that contain "pro" in the slug.
-		if ( strpos( $slug, 'pro' ) === false ) {
+		if ( $product->is_wordpress_available() ) {
 			return false;
 		}
 
@@ -61,6 +67,8 @@ class Featured_Plugins extends Abstract_Module {
 	 * @return void
 	 */
 	public function load( $product ) {
+		$this->product = $product;
+
 		if ( ! current_user_can( 'install_plugins' ) ) {
 			return;
 		}
@@ -71,7 +79,58 @@ class Featured_Plugins extends Abstract_Module {
 		}
 		add_filter( 'themeisle_sdk_plugin_api_filter_registered', '__return_true' );
 
-		add_filter( 'plugins_api_result', [ $this, 'filter_plugin_api_results' ], 10, 3 );
+		add_filter( 'plugins_api_result', [ $this, 'filter_plugin_api_results' ], 11, 3 );
+
+		// Enqueue inline JS only on plugin-install.php.
+		add_action( 'admin_enqueue_scripts', [ $this, 'maybe_add_inline_js' ] );
+	}
+
+	/**
+	 * Enqueue inline JavaScript only on plugin-install.php.
+	 *
+	 * @return void
+	 */
+	public function maybe_add_inline_js() {
+		$screen = get_current_screen();
+		if ( isset( $screen->base ) && 'plugin-install' === $screen->base ) {
+			add_action(
+				'admin_footer',
+				function() {
+					$text = esc_html( sprintf( Loader::$labels['promotions']['recommended'], $this->product->get_friendly_name() ) );
+
+					echo '<script>(function(){
+						function onPluginCardFound(card) {
+							var recommendedDiv = document.createElement("div");
+							Object.assign(recommendedDiv.style, {
+								display: "block",
+								textAlign: "center",
+								padding: "0 12px 12px",
+								background: "#f6f7f7"
+							});
+							recommendedDiv.innerHTML = "' . esc_html( $text ) . '";
+							card.appendChild(recommendedDiv);
+						}
+
+						function checkAndRun() {
+							var card = document.querySelector(".plugin-card-learning-management-system");
+							if (card && !card.dataset.recommendedAdded) {
+								onPluginCardFound(card);
+								card.dataset.recommendedAdded = "true";
+							}
+						}
+
+						var observer = new MutationObserver(function(mutations) {
+							checkAndRun();
+						});
+
+						observer.observe(document.body, { childList: true, subtree: true });
+
+						// Initial check in case the card is already present.
+						checkAndRun();
+					})();</script>';
+				}
+			);
+		}
 	}
 
 	/**
@@ -89,6 +148,11 @@ class Featured_Plugins extends Abstract_Module {
 			return $res;
 		}
 
+		if ( isset( $args->page ) && 1 === (int) $args->page && isset( $args->search ) && ! empty( $args->search ) ) {
+			$res->plugins = $this->maybe_prepend_lms_plugin( $res->plugins, $args );
+			return $res;
+		}
+
 		if ( ! isset( $args->browse ) || $args->browse !== 'featured' ) {
 			return $res;
 		}
@@ -100,6 +164,38 @@ class Featured_Plugins extends Abstract_Module {
 		$res->plugins = $plugins;
 
 		return $res;
+	}
+
+	/**
+	 * Prepend the LMS plugin if the search query matches LMS-related terms.
+	 *
+	 * @param array  $plugins The plugins array.
+	 * @param object $args The plugin API arguments.
+	 * @return array
+	 */
+	private function maybe_prepend_lms_plugin( $plugins, $args ) {
+		$search = isset( $args->search ) ? strtolower( $args->search ) : '';
+		if (
+			strpos( $search, 'lms' ) !== false ||
+			strpos( $search, 'learn' ) !== false
+		) {
+			$filter_slugs = apply_filters( 'themeisle_sdk_masteriyo_filter_slugs', [ 'learning-management-system' ] );
+			$masteriyo    = $this->get_plugins_filtered_from_author( $args, $filter_slugs, 'masteriyo' );
+
+			if ( ! empty( $masteriyo ) ) {
+				// Remove existing LMS plugin if present to avoid duplicates.
+				$plugins = array_filter(
+					$plugins,
+					function( $plugin ) {
+						return ( is_object( $plugin ) && isset( $plugin->slug ) && $plugin->slug !== 'learning-management-system' ) ||
+							( is_array( $plugin ) && isset( $plugin['slug'] ) && $plugin['slug'] !== 'learning-management-system' );
+					}
+				);
+
+				$plugins = array_merge( $masteriyo, $plugins );
+			}
+		}
+		return $plugins;
 	}
 
 	/**
@@ -116,7 +212,7 @@ class Featured_Plugins extends Abstract_Module {
 		$filtered_from_optimole = $this->get_plugins_filtered_from_author( $args, $optimole_filter_slugs, 'Optimole' );
 		$featured               = array_merge( $featured, $filtered_from_optimole );
 
-		$themeisle_filter_slugs  = apply_filters( 'themeisle_sdk_themeisle_filter_slugs', [ 'otter-blocks' ] );
+		$themeisle_filter_slugs  = apply_filters( 'themeisle_sdk_themeisle_filter_slugs', [ 'otter-blocks', 'wp-cloudflare-page-cache' ] );
 		$filtered_from_themeisle = $this->get_plugins_filtered_from_author( $args, $themeisle_filter_slugs );
 		$featured                = array_merge( $featured, $filtered_from_themeisle );
 
@@ -132,7 +228,7 @@ class Featured_Plugins extends Abstract_Module {
 	 *
 	 * @return array
 	 */
-	private function get_plugins_filtered_from_author( $args, $filter_slugs = [], $author = 'Themeisle' ) {
+	protected function get_plugins_filtered_from_author( $args, $filter_slugs = [], $author = 'Themeisle' ) {
 
 		$cached = get_transient( $this->transient_key . $author );
 		if ( $cached ) {

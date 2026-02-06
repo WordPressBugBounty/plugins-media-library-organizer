@@ -3,14 +3,14 @@
  * Block class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
  * Media Library Organizer Block definition for Gutenberg and Shortcode.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 class Media_Library_Organizer_Block {
 
@@ -270,8 +270,8 @@ class Media_Library_Organizer_Block {
 	 *
 	 * @since   1.4.9
 	 *
-	 * @param   array $atts   Block or shortcode attributes.
-	 * @return  array           Block or shortcode attributes
+	 * @param   array|mixed $atts Block or shortcode attributes.
+	 * @return  array|mixed       Block or shortcode attributes
 	 */
 	public function sanitize_atts( $atts ) {
 

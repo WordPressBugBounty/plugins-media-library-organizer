@@ -3,7 +3,7 @@
  * Media Library Organizer Tree View class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -63,13 +63,15 @@ class Media_Library_Organizer_Tree_View {
 		// Plugin Details.
 		$this->plugin                    = new stdClass();
 		$this->plugin->name              = 'media-library-organizer-tree-view';
-		$this->plugin->displayName       = __( 'Tree View', 'media-library-organizer' );
 		$this->plugin->folder            = plugin_dir_path( __FILE__ );
 		$this->plugin->url               = plugin_dir_url( __FILE__ );
 		$this->plugin->documentation_url = 'https://wpmedialibrary.com/documentation/tree-view';
 
 		// Defer loading of Plugin Classes.
 		add_action( 'init', array( $this, 'initialize' ), 2 );
+
+		// Run cron job for remove exported zip files.
+		add_action( 'media_library_organizer_remove_exported_zip', array( $this, 'remove_exported_zip' ) );
 	}
 
 	/**
@@ -79,13 +81,14 @@ class Media_Library_Organizer_Tree_View {
 	 */
 	public function initialize() {
 
+		$this->plugin->displayName = __( 'Tree View', 'media-library-organizer' );
+
 		$this->classes = new stdClass();
 
 		$this->initialize_admin();
 		$this->initialize_frontend();
 		$this->initialize_admin_or_frontend_editor();
 		$this->initialize_cli();
-		$this->initialize_global();
 	}
 
 	/**
@@ -95,8 +98,8 @@ class Media_Library_Organizer_Tree_View {
 	 */
 	private function initialize_admin() {
 
-		// Bail if this request isn't for the WordPress Administration interface.
-		if ( ! is_admin() ) {
+		// Bail if this request isn't for the WordPress Administration interface or REST API.
+		if ( ! is_admin() && ! Media_Library_Organizer()->is_rest ) {
 			return;
 		}
 
@@ -147,14 +150,6 @@ class Media_Library_Organizer_Tree_View {
 		$this->classes->ajax     = new Media_Library_Organizer_Tree_View_AJAX( self::$instance );
 		$this->classes->media    = new Media_Library_Organizer_Tree_View_Media( self::$instance );
 		$this->classes->settings = new Media_Library_Organizer_Tree_View_Settings( self::$instance );
-	}
-
-	/**
-	 * Initialize classes used everywhere
-	 *
-	 * @since   1.1.1
-	 */
-	private function initialize_global() {
 	}
 
 	/**
@@ -213,6 +208,29 @@ class Media_Library_Organizer_Tree_View {
 		}
 
 		return self::$instance;
+	}
+
+	/**
+	 * Removes exported zip files not modified in the last 24 hours.
+	 */
+	public function remove_exported_zip() {
+		$folder_path = Media_Library_Organizer()->get_class( 'filesystem' )->get_tmp_folder();
+		if ( is_wp_error( $folder_path ) ) {
+			error_log( 'Media Library Organizer: ' . $folder_path->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+			return;
+		}
+
+		if ( is_dir( $folder_path ) && is_readable( $folder_path ) ) {
+			foreach ( glob( $folder_path . '/wp-media-lib-img-export-*.zip' ) as $file ) {
+				$last_modified = filemtime( $file );
+
+				if ( time() - $last_modified > DAY_IN_SECONDS ) {
+					if ( ! wp_delete_file( $file ) ) {
+						error_log( 'Media Library Organizer: Failed to delete exported zip file: ' . $file ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+					}
+				}
+			}
+		}
 	}
 }
 

@@ -3,7 +3,7 @@
  * Media class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -72,6 +72,8 @@ class Media_Library_Organizer_Media {
 
 		// Output HTML in the Upload List and Grid Views.
 		add_action( 'admin_footer-upload.php', array( $this, 'media_library_footer' ) );
+
+		add_filter( 'wp_terms_checklist_args', array( $this, 'media_library_checklist_args' ) );
 	}
 
 	/**
@@ -507,7 +509,10 @@ class Media_Library_Organizer_Media {
 
 			// Don't filter the query if our Taxonomy Term isn't -1 (i.e. Unassigned).
 			$term = sanitize_text_field( $args[ $taxonomy_name ] );
-			if ( '-1' !== $term && -1 !== $term ) {
+			if ( 'all-files' === $term ) {
+				unset( $args[ $taxonomy_name ] );
+			}
+			if ( '-1' !== $term ) {
 				continue;
 			}
 
@@ -682,6 +687,19 @@ class Media_Library_Organizer_Media {
 			// Update WP_Query with the order parameter.
 			$query->set( 'order', $order );
 			$query->query['order'] = $order;
+		}
+
+		$_taxonomy      = apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' );
+		$query_category = $query->get( $_taxonomy );
+
+		// If no taxonomy is set in the query, use the startup_folder setting as the default taxonomy value.
+		// If the query_category is 'all-files', clear the taxonomy filter.
+		if ( empty( $query_category ) && empty( $query->get( 'tax_query' ) ) ) {
+			$startup_folder = $this->base->get_class( 'settings' )->get_setting( 'output', 'startup_folder', '' );
+			$category       = 'all-files' !== $startup_folder ? $startup_folder : '';
+			$query->set( $_taxonomy, $category );
+		} elseif ( 'all-files' === $query_category ) {
+			$query->set( $_taxonomy, '' );
 		}
 
 		// Iterate through Registered Taxonomies.
@@ -1331,5 +1349,22 @@ class Media_Library_Organizer_Media {
 
 		// Return.
 		return $show_attachment_count;
+	}
+
+	/**
+	 * Modify taxonomy checklist arguments.
+	 *
+	 * @param  array $args checklist arguments.
+	 * @return array
+	 */
+	public function media_library_checklist_args( $args ) {
+		$taxonomies      = $this->base->get_class( 'taxonomies' )->get_taxonomies();
+		$taxonomies_name = array_keys( $taxonomies );
+
+		if ( in_array( $args['taxonomy'], $taxonomies_name, true ) ) {
+			$args['checked_ontop'] = false;
+		}
+
+		return $args;
 	}
 }

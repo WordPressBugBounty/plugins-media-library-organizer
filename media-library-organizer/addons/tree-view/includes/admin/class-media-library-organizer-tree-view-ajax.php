@@ -3,7 +3,7 @@
  * Tree View AJAX class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -47,28 +47,14 @@ class Media_Library_Organizer_Tree_View_AJAX {
 		// Check nonce.
 		check_ajax_referer( 'media_library_organizer_tree_view_get_tree_view', 'nonce' );
 
-		// Get inputs.
-		$taxonomy_name   = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
-		$current_term    = isset( $_REQUEST['current_term'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['current_term'] ) ) : false;
-		$current_term_id = false;
-
-		// Get Term ID.
-		if ( false !== $current_term ) {
-			if ( is_numeric( $current_term ) ) {
-				$current_term_id = absint( $current_term );
-			} else {
-				// Get Term ID from Slug.
-				$term = get_term_by( 'slug', $current_term, $taxonomy_name );
-				if ( $term ) {
-					$current_term_id = $term->term_id;
-				}
-			}
-		}
-
-		// Get Output.
-		$output = $this->base->get_class( 'media' )->get_tree_view( $taxonomy_name, $current_term_id );
+		// Get Folders.
+		$folders = $this->base->get_class( 'media' )->get_folders();
 
 		// Done.
-		wp_send_json_success( $output );
+		wp_send_json_success(
+			array(
+				'folders' => $folders,
+			)
+		);
 	}
 }

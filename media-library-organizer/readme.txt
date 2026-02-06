@@ -1,182 +1,218 @@
 === Media Library Organizer - WordPress Media Library Folders & File Manager ===
-Contributors: optimole, wpmedialibrary
-Tags: media categories, media library, media tags, images, organizer
+Contributors: themeisle
+Tags: media library folders, export media library, organize media library, media categories, folders
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.9
 Requires PHP: 5.6
-Stable tag: 1.6.5
+Stable tag: 2.0.4
 License: GPLv2 or later
 
-Enhance file and folder management in your WordPress Media Library for images, videos, and other media.
-
+Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
 
 == Description ==
 
-Media Library Organizer adds functionality to add Media Categories to Media Library images, video, other media and attachments in your WordPress Media Library
+Managing WordPress media files shouldn't be a daily struggle. Media Library Organizer lets you create unlimited media library folders and subfolders to organize WordPress media library content with ease. Use the intuitive drag & drop editor to arrange your files into folders, ZIP and export Media Library folders, set default attributes by filetype, and so much more.
 
-=== Key Features ===
+### Why Use Media Library Organizer
 
-- Categorize images, video, other media and attachments with an unlimited number of categories and sub categories.
-- Search and filter attachments by category in all Media Library Views, including the Featured Image, Media Library List, Media Library Grid, Page Builders, ACF and more
-- Bulk categorize multiple attachments using the Tree View
+**Scale with Unlimited Organization** - Whether you're managing 100 or 100,000 media files, with unlimited Media Library folders and subfolders you can organize at any scale. No more scrolling through thousands of unorganized uploads.
 
-Media Library Organizer has no limits on the maximum number of categories or subcategories compared with other Media Organization plugins.
+**Find Files Instantly** - Stop wasting time hunting through endless media files. Create organized folder structures that make sense to you and find any file in seconds.
 
-=== Tree View ===
+**Work More Professionally** - Set default metadata for consistent SEO, customize the Media Library interface, and export Media Library folders for backup.
 
-Tree View adds a sidebar to your WordPress Media Library, where you can quickly:
+---
 
-- Add Media Categories
-- Edit Media Categories
-- Delete Media Categories
-- Drag and drop individual Attachments to a Category
-- Drag and drop multiple Attachments to a Category
+### Media Library Organizer Features
 
-[youtube https://www.youtube.com/watch?v=HkbiiBtIa_k]
+Everything you need to organize, manage, and optimize your WordPress Media Library workflow.
 
-=== Native UI ==
+**🗂️ Core Organization**
 
-Media Library Organizer doesn't replace the Media Library views that you're used to, unlike other plugins.
+- **Create unlimited folders and subfolders** - Build the folder structure that works for you. No restrictions.
+- **Drag and drop files** - Individually or bulk select images and media files, and drag them to any folder
+- **Advanced sorting options** - Sort your files by upload date, modified date, ID, author, and more
+- **Default folder** - Set the default folder for your uploads
 
-Instead, Media Library Organizer enhances WordPress' native user interface, adding the key features needed for mass organization, searching and filtering of Media Library attachments.
+**🔧 Smart File Management**
 
-=== What can I do with Media Library Organizer? ===
+- **Export Media Library** - Export individual folders or all your Media Library files by downloading them in a ZIP file
+- **Set default attributes by file type** - Set default image metadata such as alt text, caption, and description. Configurable for each file type separately with support for dynamic tags.
+- **Set display defaults** - Set defaults for how your uploads appear on your website (link to, size, alignment)
 
-- Categorize images, video, other media and attachments by creating any number of Media Categories
-- Works with all Media Library views (Featured Image, Image Picker, Media Library List, Media Library Grid, Editing a Media Library item)
-- Works with most <a href="https://wpmedialibrary.com/documentation/media-library-organizer/page-builders/" rel="friend">Page Builders</a>
-- Tree View for easy searching, filtering and Bulk Categorization with no limit on the number of Categories or Subcategories
-- Search Media by Category
-- Sort Media by Category, Date or Name
-- Intuitive Category picker, seamlessly integrated into WordPress' native UI
-- Import and Export Categories and Categorization Data from JSON or WordPress standards export file
+**🎨 Interface & Experience**
 
-=== What can I do with Media Library Organizer Pro? ===
+- **Customize the Media Library interface** - Edit grid size, number of columns, and customize what is shown in the folder tree
+- **Works with all Media Library views** - Search and filter attachments by folders in all views, including Featured Image, Media Library List, Grid, Page Builders, ACF, and more
 
-> <a href="https://wpmedialibrary.com/pricing" rel="friend" title="Media Library Organizer Pro">Media Library Organizer Pro</a> provides additional functionality:<br />
->
-> - **<a href="https://wpmedialibrary.com/features/auto-categorize-images/" rel="friend" title="Auto Categorize Media in WordPress">Auto Categorization</a>:**<br />Automatically categorize images uploaded through WordPress using image recognition<br />
-> - **<a href="https://wpmedialibrary.com/features/bulk-quick-edit-media/" rel="friend" title="Bulk and Quick Edit Media">Bulk and Quick Edit Media</a>:**<br />Bulk and Quick Edit Titles, Descriptions, Categories and more<br />
-> - **<a href="https://wpmedialibrary.com/features/default-attributes/" rel="friend" title="Default Attributes">Default Attributes</a>:**<br />Define Default Titles, Alt Tags, Captions, Descriptions and Categories for newly uploaded files where no data is specified<br />
-> - **<a href="https://wpmedialibrary.com/features/duplication/" rel="friend" title="Duplicate WordPress Attachments">Duplicate Attachments</a>:**<br />Duplicate one or more attachments in the Media Library<br />
-> - **<a href="https://wpmedialibrary.com/features/dynamic-galleries/" rel="friend" title="Dynamic Galleries">Dynamic Galleries</a>:**<br />Extend WordPress' [gallery] shortcode, building paginated, dynamic galleries by Media Category, Author, Search Terms and more.<br />
-> - **<a href="https://wpmedialibrary.com/features/exif-iptc/" rel="friend" title="EXIF and IPTC">EXIF and IPTC</a>:**<br />Read, write and display EXIF, GPS and IPTC (IIM and XMP) image data, and map this data to newly uploaded images<br />
-> - **<a href="https://wpmedialibrary.com/documentation/output/setup/" rel="friend" title="Customize Media Library Output">Output</a>:**<br />Change the size of thumbnails in the Media Library<br />
-> - **<a href="https://wpmedialibrary.com/documentation/taxonomy-manager/setup/" rel="friend" title="Manage Attachment Taxonomies">Taxonomy Manager</a>:**<br />Define additional Taxonomies alongside Media Categories - for example, Size, Color, Product Make<br />
-> - **<a href="https://wpmedialibrary.com/features/zip-unzip/" rel="friend" title="Auto ZIP and Unzip">ZIP and Unzip</a>:**<br />Automatically unzip files when uploaded to the Media Library, and zip multiple Media Library files<br />
->
-> - **<a href="https://wpmedialibrary.com/support" rel="friend" title="WordPress Media Library Support">Support</a>**: Access to one on one email support<br />
-> - **<a href="https://wpmedialibrary.com/documentation" rel="friend" title="WordPress Media Library Support">Documentation</a>**: Detailed documentation on how to install and configure the plugin<br />
-> - **Updates**<br />Receive one click update notifications, right within your WordPress Adminstration panel<br />
-> - **Seamless Upgrade**<br />Retain all current settings when upgrading to Pro<br />
->
-> [Upgrade to Media Library Organizer Pro](https://wpmedialibrary.com/pricing/)
+**🔄 Migration & Compatibility**
 
-=== Page Builders ===
+- **Import from other plugins** - Easily migrate from other WordPress Media Library plugins
+- **Compatible with all your favorite tools** - Works with the most popular page builders, themes, and WordPress plugins
 
-Media Library Organizer's category search filters and sorting options have been tested with the following Page Builders:
+---
 
-- Ark (Theme)
-- Avada 7.0+ (Theme)
-- Avada Builder (Plugin, formerly called Fusion Builder)
-- Avia Layout Builder (Plugin)
-- Beaver Builder (Plugin)
-- BeTheme 21.1.x+ (Theme)
-- Bold Page Builder (Plugin)
-- Divi 3.0+ (Theme) and The Divi Builder (Plugin)
-- Elementor and Elementor Pro (Plugin)
-- Enfold (Theme)
-- Flatsome (Theme)
-- Fresh Builder (Plugin)
-- Kallyas Theme (using Zion Page Builder)
-- KuteThemes (Themes using Ovic Addons Toolkit Plugin)
-- Live Composer (Plugin)
-- Muffin Page Builder (Plugin)
-- Oxygen Page Builder (Plugin)
-- SiteOrigin Page Builder (Plugin)
-- The7 (Theme)
-- TheBuilt (Theme)
-- Themify Ultra (Theme)
-- Themify Builder (Plugin)
-- Thrive Architect (Plugin)
-- Visual Composer (Plugin)
-- WPBakery Page Builder (Plugin)
+### Pro Features & Advanced Tools
 
-This is not an exhaustive list; your Page Builder may work!  Media Library Organizer is coded to WordPress standards, ensuring best possible compatibility with other Themes and Plugins not listed here.  Feel free to try your Page Builder of choice, and contact us if you run into any issues.
+Save hours every week with intelligent automation, powerful search tools, and professional media management features designed for serious WordPress users. [See Pro Features & Pricing →](https://wpmedialibrary.com/)
 
-=== Migrations ===
+**🔍 Advanced Search & Discovery**
 
-Media Library Organizer has in built importers, allowing you to migrate from other WordPress Media Library Plugins:
+- **Advanced search** - Search by alt text, filename, caption, or description with match type options
+- **Multi-select filters** - Use multiple filters at the same time to narrow down results
 
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-enhanced-media-library/" rel="friend" title="Import from Enhanced Media Library">Enhanced Media Library</a>
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-filebird/" rel="friend" title="Import from FileBird">FileBird</a>
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-folders-premio/" rel="friend" title="Import from Folders (Premio)">Folders (Premio)</a>
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-happyfiles/" rel="friend" title="Import from HappyFiles">HappyFiles</a>
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-wicked-folders/" rel="friend" title="Import from Wicked Folders">Wicked Folders</a>
-* <a href="https://wpmedialibrary.com/documentation/import-export/import-from-wp-media-folder/" rel="friend" title="Import from WP Media Folder by JoomUnited">WP Media Folder</a>
+**🔧 Advanced File Management**
 
-= Support =
+- **AI image categorization** - Automatically categorize your images using AI-powered visual recognition
+- **Smart upload workflow** - Show folder selection and metadata editing fields when uploading media files
+- **Default attribute rules** - Create rules for applying default attributes automatically
+- **Duplicate files** - Duplicate any file with just one click
 
-We will do our best to provide support through the <a href="https://wordpress.org/support/plugin/media-library-organizer/">WordPress forums</a>.
+**⚙️ Advanced File Operations**
 
-However, please understand that this is a free plugin, so support will be limited. Please read this article on <a href="http://www.wpbeginner.com/beginners-guide/how-to-properly-ask-for-wordpress-support-and-get-it/">how to properly ask for WordPress support and get it</a>.
+- **Upload entire folders** - Create folders based on the folder structure inside ZIP files
+- **Auto-extract ZIP files** - Automatically extract and organize ZIP file contents
+- **ZIP multiple files** - Create archives from selected media files
 
-If you require one to one email support, consider <a href="http://wpmedialibrary.com/pricing" rel="friend">upgrading to the Pro version</a>.
+**🎯 Professional Media Management**
 
-= Documentation =
+- **EXIF and IPTC editing** - Enable editing of professional image metadata
+- **Custom taxonomies** - Create additional taxonomies for media files beyond folders
+- **Create dynamic galleries** - Extend WordPress' [gallery] shortcode to build advanced dynamic galleries
 
-<a href="https://wpmedialibrary.com/documentation" title="Media Library Organizer Documentation">Full Documentation</a>
+**🖼️ Image Optimization**
 
-== Installation ==
+- **Image optimization** - Enable compression and set custom quality levels
+- **WebP conversion** - Automatically convert uploaded images to WebP format for better compression
 
-1. Install Media Library Organizer via the Plugins > Add New section of your WordPress Installation, or by uploading the downloaded
-ZIP file via Plugins > Add New > Upload Plugin.
-2. Active the Media Library Organizer plugin through the 'Plugins' menu in WordPress
+---
 
-== Frequently Asked Questions ==
+### Why Use Media Library Organizer
 
-= Why isn't the Media Categories Dropdown Filter displaying? =
+From small blogs to enterprise sites, everyone benefits from better media organization. Here's how different types of websites stay organized:
 
-- Navigate to Media Library Organizer > Settings > Filters
-- Under Media Categories, select Enabled
-- Click Save
+**🛒 E-commerce Stores** - Organize product images by category, brand, or collection. 
+**📰 News & Magazine Sites** - Sort photo uploads by date, topic, or photographer.
+**🏠 Real Estate Websites** - Organize property photos by listing, location, or status. 
+**📸 Photography & Design Portfolios** - Structure galleries by project, client, or shoot date.
+**📚 Online Course Creators** - Separate videos, PDFs, and images by course or module.
+**🏢 Corporate Websites** - Manage marketing materials, documents, and assets by department, campaign, or date.
 
-= What can I do with Media Library Organizer? =
+---
 
-- Categorize images, video, other media and attachments with an unlimited number of categories and sub categories.
-- Search and filter attachments by category in all Media Library Views, including the Featured Image, Media Library List, Media Library Grid, Page Builders, ACF and more
-- Bulk categorize multiple attachments using the Tree View
-- Add, edit and delete Media Categories
-- Drag and drop individual and multiple Attachments to a Category
+### Support & Documentation
 
-To auto categorize attachments, bulk edit other attributes, manage EXIF, GPS and IPTC metadata, apply default attributes and more, [Upgrade to Media Library Organizer Pro](https://wpmedialibrary.com/pricing/)
+We’re here to help. Feel free to open a new thread on the [Support Forum](https://wordpress.org/support/plugin/media-library-organizer/).
 
-= What can I do with Media Library Organizer Pro? =
+Need help getting started? Check out our [documentation](https://docs.themeisle.com/collection/2282-media-library-organizer) for guides on every feature.
 
-- Auto Categorize images using image recognition
-- Bulk and Quick Edit Titles, Alt Tags, Captions, Descriptions, Categories, EXIF and IPTC metadata from the List and Grid Media Library Views
-- Conditionally define Default Titles, Alt Tags, Captions, Descriptions, Categories, EXIF and IPTC metadata for newly uploaded files
-- Duplicate one or more attachments in the Media Library
-- Extend WordPress' [gallery] shortcode, building paginated, dynamic galleries by Media Category, Author, Search Terms and more.
-- Change the size of thumbnails in Media Library Grid Views
-- Automatically unzip files when uploaded to the Media Library, and zip multiple Media Library files
+### Useful Resources
 
-[Upgrade to Media Library Organizer Pro](https://wpmedialibrary.com/pricing/)
+- If you like Media Library Organizer, you’re sure to love [our other plugins](https://themeisle.com/wordpress-plugins/) as well.
+- Learn more about WordPress on our [blog](https://themeisle.com/blog/).
+- Get the most out of your WordPress website with our helpful [YouTube Tutorials](https://youtube.com/playlist?list=PLmRasCVwuvpSep2MOsIoE0ncO9JE3FcKP).
 
-== Screenshots ==
+## Installation ##
+Getting started with Media Library Organizer takes less than a minute. The easiest way to install Media Library Organizer is directly from your WordPress admin:
 
-1. Categorization Filters and Sort Filters on Media Screen
-2. Edit Categories when editing Media
-3. Manage Categories
-4. Plugin-wide Settings
+1. Navigate to **Plugins → Add New** in your WordPress dashboard
+2. Search for "Media Library Organizer"
+3. Click **Install Now** on the Media Library Organizer plugin by Themeisle
+4. Once installed, click **Activate** to enable the plugin
+5. You'll find the new **Media Library Organizer** menu item in your WordPress admin sidebar
+
+## Frequently Asked Questions ##
+
+### Is there a limit on Media Library folders or files I can manage with this plugin? ###
+No limits! Create as many folders, subfolders, and organize as many media files as you need.
+
+### What file types are supported? ###
+Media Library Organizer works with all WordPress-supported file types, including images (JPG, PNG, GIF, WebP), videos (MP4, MOV, AVI), audio files (MP3, WAV), documents (PDF, DOC, DOCX), and any other media format that WordPress allows you to upload.
+
+### Can I back up my folder structure? ###
+Yes! Media Library Organizer includes a dedicated export feature for backing up your folder structure and settings.
+
+### What happens if I deactivate the plugin? ###
+Your media files stay exactly where they are. Nothing is deleted or moved. The folder organization is stored separately, so if you reactivate the plugin later, all your folders and organization will be restored exactly as you left them.
+
+### What metadata can I set as defaults? ###
+You can set default metadata for each file type separately, including alt text, captions, descriptions, default upload folders, EXIF, and IPTC data.
+
+## Screenshots ##
+
+1. Media Library folders
+2. Folder context menu
+3. Media Library view settings
+4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.0.4 (2025-12-17)
+
+- Fixed issue with creating new Media Category from “Attachment details” modal
+- Improved loading in grid view with lazy load
+- Fixing styling issues with banner and notice
+
+
+
+
+#####   Version 2.0.3 (2025-12-03)
+
+- Fixed file upload inside category
+- Fixed category state in media grid view
+- Fixed compatibility with some plugins that was caused by a class name
+- Added NPS survey
+
+
+
+
+#####   Version 2.0.2 (2025-10-20)
+
+- Fixed search for subfolders
+
+
+
+
+#####   Version 2.0.1 (2025-10-13)
+
+* Fix build by adding missing js files
+
+
+
+
+####   Version 2.0.0 (2025-10-13)
+
+### New Features
+
+- Added the ability to download Media Library folders.
+- Introduced an option to set a default startup folder in the Media Library.
+- Added Show file count and Show empty folder options for better folder management.
+- [PRO] Introduced sortable Media Categories within folders, making media organization faster and more intuitive.
+
+### Enhancements
+
+- Simplified the Plugin Settings UI for a cleaner, more user-friendly experience.
+- Introduced a modern, redesigned sidebar for media categories, featuring new management options.
+- Defaults and Output module options are now accessible in the free version.
+- Optimized dynamic tag generation for better linking between fields and documentation references.
+- Improved performance and load times for downloading and managing large media folders.
+
+### Bug Fixes
+
+- Fixed Load Textdomain translation errors in both free and pro versions.
+- Resolved several UI layout inconsistencies across screens.
+- Fixed PHP 8.3 compatibility issues to ensure smooth operation on newer server environments.
+- Resolved pagination display issues in the Dynamic Gallery shortcode.
+- Fixed an issue where Media Category items did not update correctly in Quick Edit mode.
+- Corrected category assignment errors when uploading images through the page editor.
+- Fixed auto-categorization upload errors triggered during media uploads.
+
+
+
 
 #####   Version 1.6.5 (2024-08-03)
 
 - Fixed the issue that was not allowing to active license key for the PRO plugin
-
-
 
 
 #####   Version 1.6.4 (2024-07-01)

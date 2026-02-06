@@ -3,7 +3,7 @@
  * Tree View Media class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -44,6 +44,9 @@ class Media_Library_Organizer_Tree_View_Media {
 
 		// Output HTML in the Upload List and Grid Views.
 		add_action( 'media_library_organizer_media_media_library_footer', array( $this, 'media_library_footer' ) );
+
+		// Initilize a cron event to removed exported zip files.
+		add_action( 'init', array( $this, 'schedule_expired_zip_cleanup' ) );
 	}
 
 	/**
@@ -76,14 +79,18 @@ class Media_Library_Organizer_Tree_View_Media {
 		wp_enqueue_script( $this->base->plugin->name . '-jstree', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'jstree' . ( $ext ? '-' . $ext : '' ) . '.js', array( 'jquery' ), Media_Library_Organizer()->plugin->version, true );
 		wp_enqueue_script( $this->base->plugin->name . '-resize-sensor', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'resize-sensor' . ( $ext ? '-' . $ext : '' ) . '.js', array(), Media_Library_Organizer()->plugin->version, true );
 		wp_enqueue_script( $this->base->plugin->name . '-sticky-sidebar', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'sticky-sidebar' . ( $ext ? '-' . $ext : '' ) . '.js', array(), Media_Library_Organizer()->plugin->version, true );
-		wp_enqueue_script( $this->base->plugin->name . '-jquery-ui-contextmenu', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'jquery.ui-contextmenu' . ( $ext ? '-' . $ext : '' ) . '.js', array( 'jquery' ), Media_Library_Organizer()->plugin->version, true );
-		wp_enqueue_script( $this->base->plugin->name . '-media', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'media' . ( $ext ? '-' . $ext : '' ) . '.js', array( 'jquery' ), Media_Library_Organizer()->plugin->version, true );
+		wp_enqueue_script( $this->base->plugin->name . '-jquery-ui-contextmenu', $this->base->plugin->url . 'assets/js/jquery.ui-contextmenu-min.js', array( 'jquery' ), Media_Library_Organizer()->plugin->version, true );
+		wp_enqueue_script( $this->base->plugin->name . '-media-sidebar', MEDIA_LIBRARY_ORGANIZER_PLUGIN_URL . 'assets/build/sidebar.js', array(), Media_Library_Organizer()->plugin->version, true );
+		wp_enqueue_script( $this->base->plugin->name . '-media', $this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'media' . ( $ext ? '-' . $ext : '' ) . '.js', array( 'jquery', $this->base->plugin->name . '-media-sidebar' ), Media_Library_Organizer()->plugin->version, true );
 
 		// Get Tree View Taxonomy.
 		$taxonomy = $this->get_tree_view_taxonomy();
 
 		// Add Context Menu to Add, Edit and Delete Categories if the User's Role permits this.
 		$context_menu = false;
+
+		// Add special option (download) to the context menu.
+		$context_menu_special_option = false;
 		if ( current_user_can( 'manage_categories' ) ) {
 			$context_menu = array(
 				array(
@@ -99,6 +106,15 @@ class Media_Library_Organizer_Tree_View_Media {
 					'cmd'   => 'delete_term',
 				),
 			);
+
+			$context_menu_special_option = array(
+				array(
+					'title' => __( 'Download', 'media-library-organizer' ),
+					'cmd'   => 'download_folder',
+				),
+			);
+
+			$context_menu = array_merge( $context_menu, $context_menu_special_option );
 		}
 
 		/**
@@ -110,6 +126,16 @@ class Media_Library_Organizer_Tree_View_Media {
 		 * @param   mixed   $context_menu   Context Menu (false: none, array).
 		 */
 		$context_menu = apply_filters( 'media_library_organizer_tree_view_media_context_menu', $context_menu );
+
+		/**
+		 * Defines the menu items for the Tree View's Context Menu, triggered when a user
+		 * right clicks on a Category in the Tree View.
+		 *
+		 * @since   1.3.9
+		 *
+		 * @param   mixed   $context_menu_download_option   Context Menu (false: none, array).
+		 */
+		$context_menu_special_option = apply_filters( 'media_library_organizer_tree_view_media_context_menu_download_option', $context_menu_special_option );
 
 		// Define the AJAX actions supported by Tree View.
 		$actions = array(
@@ -158,6 +184,10 @@ class Media_Library_Organizer_Tree_View_Media {
 				'action' => 'media_library_organizer_tree_view_get_tree_view',
 				'nonce'  => wp_create_nonce( 'media_library_organizer_tree_view_get_tree_view' ),
 			),
+			'download_folder'        => array(
+				'action' => 'media_library_organizer_download_folder',
+				'nonce'  => wp_create_nonce( 'media_library_organizer_download_folder' ),
+			),
 		);
 
 		/**
@@ -171,26 +201,191 @@ class Media_Library_Organizer_Tree_View_Media {
 		$actions = apply_filters( 'media_library_organizer_tree_view_media_actions', $actions );
 
 		// Define Media Settings.
-		$media_settings = array(
-			'ajaxurl'          => admin_url( 'admin-ajax.php' ),
-			'actions'          => $actions,
-			'context_menu'     => $context_menu,
-			'taxonomy'         => $taxonomy,
-			'selected_term'    => Media_Library_Organizer()->get_class( 'media' )->get_selected_terms_slugs( $taxonomy->name ),
-			'selected_term_id' => Media_Library_Organizer()->get_class( 'media' )->get_selected_terms_ids( $taxonomy->name ),
-			'media_view'       => Media_Library_Organizer()->get_class( 'common' )->get_media_view(),
-			'jstree'           => Media_Library_Organizer()->get_class( 'settings' )->get_setting( 'tree-view', 'expand_collapse' ),
-			'labels'           => array(
+		$media_settings  = array(
+			'ajaxurl'                     => admin_url( 'admin-ajax.php' ),
+			'actions'                     => $actions,
+			'context_menu'                => $context_menu,
+			'taxonomy'                    => $taxonomy,
+			'selected_term'               => Media_Library_Organizer()->get_class( 'media' )->get_selected_terms_slugs( $taxonomy->name ),
+			'selected_term_id'            => Media_Library_Organizer()->get_class( 'media' )->get_selected_terms_ids( $taxonomy->name ),
+			'media_view'                  => Media_Library_Organizer()->get_class( 'common' )->get_media_view(),
+			'jstree'                      => Media_Library_Organizer()->get_class( 'settings' )->get_setting( 'tree-view', 'expand_collapse' ),
+			'labels'                      => array(
 				/* translators: Number of attachments */
 				'categorized_attachments' => __( 'Categorized %s items', 'media-library-organizer' ),
 				/* translators: Number of attachments */
 				'categorize_attachments'  => __( 'Categorize %s items', 'media-library-organizer' ),
 				'categorize_attachment'   => __( 'Categorize 1 item', 'media-library-organizer' ),
 			),
+			'context_menu_special_option' => $context_menu_special_option,
 		);
+		$sidebar_settigs = array(
+			'api'        => rest_url( Media_Library_Organizer()->plugin->namespace ),
+			'rest_nonce' => wp_create_nonce( 'wp_rest' ),
+			'settings'   => Media_Library_Organizer()->get_class( 'settings' )->get_settings( 'output' ),
+			'folders'    => $this->get_folders(),
+			'taxonomy'   => apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' ),
+			'media_view' => Media_Library_Organizer()->get_class( 'common' )->get_media_view(),
+			'is_pro'     => function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid(),
+		);
+		$sidebar_settigs = apply_filters( 'media_library_organizer_output_settings', $sidebar_settigs );
 
 		// Localize Media script.
 		wp_localize_script( $this->base->plugin->name . '-media', 'media_library_organizer_tree_view', $media_settings );
+		wp_localize_script( $this->base->plugin->name . '-media-sidebar', 'sidebar', $sidebar_settigs );
+		wp_set_script_translations( $this->base->plugin->name . '-media-sidebar', 'media-library-organizer' );
+	}
+
+	/**
+	 * Recursively update term counts to include child term counts.
+	 *
+	 * @param array  $terms_by_id Array of terms indexed by term ID.
+	 * @param string $taxonomy_name Taxonomy name.
+	 * @return void
+	 */
+	private function update_recursive_counts( &$terms_by_id, $taxonomy_name ) {
+		foreach ( $terms_by_id as $term_id => &$term_data ) {
+			if ( ! empty( $term_data['children'] ) ) {
+				$term_data['count'] = $this->calculate_recursive_count( $term_data, $taxonomy_name );
+			}
+		}
+	}
+
+	/**
+	 * Calculate the total count for a term including all child terms (unique attachments only).
+	 *
+	 * @param array  $term_data Term data array.
+	 * @param string $taxonomy_name Taxonomy name.
+	 * @return int Total count of unique attachments including children.
+	 */
+	private function calculate_recursive_count( $term_data, $taxonomy_name ) {
+		$term_ids = $this->collect_term_ids( $term_data );
+
+		// Query for unique attachments across all these terms.
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'attachment',
+				'post_status'    => 'inherit',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'tax_query'      => array(
+					array(
+						'taxonomy' => $taxonomy_name,
+						'field'    => 'term_id',
+						'terms'    => $term_ids,
+					),
+				),
+			)
+		);
+
+		return $query->found_posts;
+	}
+
+	/**
+	 * Collect all term IDs from a term and its descendants.
+	 *
+	 * @param array $term_data Term data array.
+	 * @return array Array of term IDs.
+	 */
+	private function collect_term_ids( $term_data ) {
+		$term_ids = array( $term_data['id'] );
+
+		if ( ! empty( $term_data['children'] ) ) {
+			foreach ( $term_data['children'] as $child ) {
+				$term_ids = array_merge( $term_ids, $this->collect_term_ids( $child ) );
+			}
+		}
+
+		return $term_ids;
+	}
+
+	/**
+	 * Get folder structure.
+	 *
+	 * @return array
+	 */
+	public function get_folders() {
+		$attachments_count = wp_count_posts( 'attachment' );
+		$total_attachments = isset( $attachments_count->inherit ) ? $attachments_count->inherit : 0;
+		$taxonomy          = $this->get_tree_view_taxonomy();
+		$folders           = array();
+		$startup_folder    = Media_Library_Organizer()->get_class( 'settings' )->get_setting( 'output', 'startup_folder', '' );
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy->name,
+				'hide_empty' => false,
+			)
+		);
+
+		if ( is_wp_error( $terms ) ) {
+			return array();
+		}
+
+		// Prepare an array of terms indexed by term ID for easy lookup.
+		$terms_by_id = array();
+		foreach ( $terms as $term ) {
+			$created_at                    = get_term_meta( $term->term_id, '_created_at', true );
+			$modified_at                   = get_term_meta( $term->term_id, '_modified_at', true );
+			$terms_by_id[ $term->term_id ] = array(
+				'id'          => $term->term_id,
+				'name'        => $term->name,
+				'count'       => $term->count,
+				'parent'      => $term->parent ? $term->parent : null,
+				'children'    => array(),
+				'type'        => 'folder',
+				'created_at'  => $created_at,
+				'modified_at' => $modified_at,
+				'slug'        => $term->slug,
+			);
+		}
+
+		foreach ( $terms_by_id as $term_id => $term_data ) {
+			if ( $term_data['parent'] && isset( $terms_by_id[ $term_data['parent'] ] ) ) {
+				$terms_by_id[ $term_data['parent'] ]['children'][] = &$terms_by_id[ $term_id ];
+			} else {
+				$folders[] = &$terms_by_id[ $term_id ];
+			}
+		}
+
+		// Update counts to include child term counts recursively.
+		$this->update_recursive_counts( $terms_by_id, $taxonomy->name );
+
+		$unassigned_attachment = new WP_Query(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'tax_query'   => array(
+					array(
+						'taxonomy' => $taxonomy->name,
+						'operator' => 'NOT EXISTS',
+					),
+				),
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+
+		$special_folders = array(
+			array(
+				'id'     => 'all-files',
+				'name'   => __( 'All Files', 'media-library-organizer' ),
+				'type'   => 'all',
+				'count'  => $total_attachments,
+				'parent' => null,
+				'slug'   => 'all-files',
+			),
+			array(
+				'id'     => 'unassigned',
+				'name'   => __( 'Uncategorized', 'media-library-organizer' ),
+				'type'   => 'unassigned',
+				'count'  => $unassigned_attachment->found_posts,
+				'parent' => null,
+				'slug'   => '-1',
+			),
+		);
+
+		return array_merge( $special_folders, $folders );
 	}
 
 	/**
@@ -207,6 +402,7 @@ class Media_Library_Organizer_Tree_View_Media {
 
 		// CSS.
 		wp_enqueue_style( $this->base->plugin->name . '-media', $this->base->plugin->url . '/assets/css/media.css', array(), Media_Library_Organizer()->plugin->version );
+		wp_enqueue_style( $this->base->plugin->name . '-media-sidebar', MEDIA_LIBRARY_ORGANIZER_PLUGIN_URL . 'assets/build/sidebar.css', array(), Media_Library_Organizer()->plugin->version );
 	}
 
 	/**
@@ -264,17 +460,7 @@ class Media_Library_Organizer_Tree_View_Media {
 			return;
 		}
 
-		// Get Taxonomy.
-		$taxonomy = $this->get_tree_view_taxonomy();
-
-		// Get Tree View.
-		$output = $this->get_tree_view( $taxonomy->name, Media_Library_Organizer()->get_class( 'media' )->get_selected_terms_ids( $taxonomy->name ) );
-
-		// Check is JSTree enabled.
-		$jstree_enabled = Media_Library_Organizer()->get_class( 'settings' )->get_setting( 'tree-view', 'jstree_enabled' );
-
-		// Output.
-		require_once $this->base->plugin->folder . '/views/admin/media.php';
+		echo '<div id="media-library-organizer-tree-view" ></div>';
 
 		// Output Notification.
 		require_once Media_Library_Organizer()->plugin->folder . '/_modules/dashboard/views/notification.php';
@@ -347,10 +533,10 @@ class Media_Library_Organizer_Tree_View_Media {
 
 		// Output.
 		$output = '<ul>
-            <li class="cat-item-all">
+            <li class="cat-item-all context-menu">
                 <a href="' . $this->get_all_terms_link() . '">' . __( 'All', 'media-library-organizer' ) . '</a>
             </li>
-            <li class="cat-item-unassigned">
+            <li class="cat-item-unassigned context-menu">
                 <a href="' . $this->get_unassigned_term_link( $taxonomy_name ) . '">' . __( '(Unassigned)', 'media-library-organizer' ) . '</a>
             </li>' .
 			wp_list_categories( $args ) /* @phpstan-ignore-line */ . '
@@ -427,5 +613,15 @@ class Media_Library_Organizer_Tree_View_Media {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Add cron job to remove exported zip files.
+	 */
+	public function schedule_expired_zip_cleanup() {
+		$is_scheduled = wp_next_scheduled( 'media_library_organizer_remove_exported_zip' );
+		if ( ! $is_scheduled ) {
+			wp_schedule_event( time() + 60, 'daily', 'media_library_organizer_remove_exported_zip' );
+		}
 	}
 }

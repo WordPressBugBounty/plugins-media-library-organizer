@@ -3,7 +3,7 @@
  * Plugin installation, upgrade and uninstallation class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**

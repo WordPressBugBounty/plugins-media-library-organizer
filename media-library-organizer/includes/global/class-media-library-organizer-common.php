@@ -3,7 +3,7 @@
  * Common class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -48,6 +48,7 @@ class Media_Library_Organizer_Common {
 		// Get fields.
 		$fields = array(
 			'input.wpzinc-autocomplete',
+			'textarea.wpzinc-autocomplete',
 		);
 
 		/**

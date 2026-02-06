@@ -32,7 +32,7 @@ class Promotions extends Abstract_Module {
 	 *
 	 * @var array
 	 */
-	private $promotions = array();
+	public $promotions = array();
 
 	/**
 	 * Holds the values of the promotions that are not allowed to be shown.
@@ -71,11 +71,46 @@ class Promotions extends Abstract_Module {
 	private $option_rop = 'themeisle_sdk_promotions_rop_installed';
 
 	/**
-	 * Option key for Neve FSE promos.
+	 * Option key for Neve promo.
 	 *
 	 * @var string
 	 */
-	private $option_neve_fse = 'themeisle_sdk_promotions_neve_fse_installed';
+	private $option_neve = 'themeisle_sdk_promotions_neve_installed';
+
+	/**
+	 * Option key for Redirection for CF7.
+	 *
+	 * @var string
+	 */
+	private $option_redirection_cf7 = 'themeisle_sdk_promotions_redirection_cf7_installed';
+
+	/**
+	 * Option key for Hyve.
+	 * 
+	 * @var string
+	 */
+	private $option_hyve = 'themeisle_sdk_promotions_hyve_installed';
+
+	/**
+	 * Option key for WP Full Pay.
+	 * 
+	 * @var string
+	 */
+	private $option_wp_full_pay = 'themeisle_sdk_promotions_wp_full_pay_installed';
+
+	/**
+	 * Option key for Feedzy.
+	 *
+	 * @var string
+	 */
+	private $option_feedzy = 'themeisle_sdk_promotions_feedzy_installed';
+
+	/**
+	 * Option key for Masteriyo promos.
+	 *
+	 * @var string
+	 */
+	private $option_masteriyo = 'themeisle_sdk_promotions_masteriyo_installed';
 
 	/**
 	 * Loaded promotion.
@@ -113,12 +148,23 @@ class Promotions extends Abstract_Module {
 			return false;
 		}
 
-		$this->debug          = apply_filters( 'themeisle_sdk_promo_debug', $this->debug );
-		$promotions_to_load   = apply_filters( $product->get_key() . '_load_promotions', array() );
+		$this->debug        = apply_filters( 'themeisle_sdk_promo_debug', $this->debug );
+		$promotions_to_load = apply_filters( $product->get_key() . '_load_promotions', array() );
+
 		$promotions_to_load[] = 'optimole';
 		$promotions_to_load[] = 'rop';
 		$promotions_to_load[] = 'woo_plugins';
-		$promotions_to_load[] = 'neve-fse';
+		$promotions_to_load[] = 'neve';
+		$promotions_to_load[] = 'redirection-cf7';
+		$promotions_to_load[] = 'hyve';
+		$promotions_to_load[] = 'wp_full_pay';
+		$promotions_to_load[] = 'feedzy_import';
+		$promotions_to_load[] = 'learning-management-system';
+
+		if ( defined( 'NEVE_VERSION' ) || defined( 'WPMM_PATH' ) || defined( 'OTTER_BLOCKS_VERSION' ) || defined( 'OBFX_URL' ) ) {
+			$promotions_to_load[] = 'feedzy_embed';
+		}
+		$promotions_to_load = array_unique( $promotions_to_load );
 
 		$this->promotions = $this->get_promotions();
 
@@ -129,7 +175,6 @@ class Promotions extends Abstract_Module {
 				unset( $this->promotions[ $slug ] );
 			}
 		}
-
 		add_action( 'init', array( $this, 'register_settings' ), 99 );
 		add_action( 'admin_init', array( $this, 'register_reference' ), 99 );
 
@@ -146,13 +191,13 @@ class Promotions extends Abstract_Module {
 			return;
 		}
 
-		$this->product = $product;
+		$last_dismiss_time = $this->get_last_dismiss_time();
 
-		$last_dismiss = $this->get_last_dismiss_time();
-
-		if ( ! $this->debug && $last_dismiss && ( time() - $last_dismiss ) < 7 * DAY_IN_SECONDS ) {
+		if ( ! $this->debug && is_int( $last_dismiss_time ) && ( time() - $last_dismiss_time ) < ( 3 * WEEK_IN_SECONDS ) ) {
 			return;
 		}
+
+		$this->product = $product;
 
 		add_filter( 'attachment_fields_to_edit', array( $this, 'add_attachment_field' ), 10, 2 );
 		add_action( 'current_screen', [ $this, 'load_available' ] );
@@ -160,7 +205,7 @@ class Promotions extends Abstract_Module {
 		add_action( 'wp_ajax_tisdk_update_option', array( $this, 'dismiss_promotion' ) );
 		add_filter( 'themeisle_sdk_ran_promos', '__return_true' );
 
-		if ( get_option( $this->option_neve_fse, false ) !== true ) {
+		if ( get_option( $this->option_neve, false ) !== true ) {
 			add_action( 'wp_ajax_themeisle_sdk_dismiss_notice', 'ThemeisleSDK\Modules\Notification::regular_dismiss' );
 		}
 	}
@@ -209,8 +254,21 @@ class Promotions extends Abstract_Module {
 			update_option( 'rop_reference_key', sanitize_key( $_GET['rop_reference_key'] ) );
 		}
 
-		if ( isset( $_GET['neve_fse_reference_key'] ) ) {
-			update_option( 'neve_fse_reference_key', sanitize_key( $_GET['neve_fse_reference_key'] ) );
+		if ( isset( $_GET['neve_reference_key'] ) ) {
+			update_option( 'neve_reference_key', sanitize_key( $_GET['neve_reference_key'] ) );
+		}
+
+		if ( isset( $_GET['hyve_reference_key'] ) ) {
+			update_option( 'hyve_reference_key', sanitize_key( $_GET['hyve_reference_key'] ) );
+		}
+
+		if ( isset( $_GET['wp_full_pay_reference_key'] ) ) {
+			update_option( 'wp_full_pay_reference_key', sanitize_key( $_GET['wp_full_pay_reference_key'] ) );
+		}
+
+		if ( isset( $_GET['feedzy_reference_key'] ) || ( isset( $_GET['from'], $_GET['plugin'] ) && $_GET['from'] === 'import' && str_starts_with( sanitize_key( $_GET['plugin'] ), 'feedzy' ) ) ) {
+			update_option( 'feedzy_reference_key', sanitize_key( $_GET['feedzy_reference_key'] ?? 'i-' . $this->product->get_key() ) );
+			update_option( $this->option_feedzy, 1 );
 		}
 	}
 
@@ -263,7 +321,47 @@ class Promotions extends Abstract_Module {
 		);
 		register_setting(
 			'themeisle_sdk_settings',
-			$this->option_neve_fse,
+			$this->option_neve,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest'      => true,
+				'default'           => false,
+			)
+		);
+		register_setting(
+			'themeisle_sdk_settings',
+			$this->option_redirection_cf7,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest'      => true,
+				'default'           => false,
+			)
+		);
+		register_setting(
+			'themeisle_sdk_settings',
+			$this->option_hyve,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest'      => true,
+				'default'           => false,
+			)
+		);
+		register_setting(
+			'themeisle_sdk_settings',
+			$this->option_wp_full_pay,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest'      => true,
+				'default'           => false,
+			)
+		);
+		register_setting(
+			'themeisle_sdk_settings',
+			$this->option_masteriyo,
 			array(
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -313,31 +411,48 @@ class Promotions extends Abstract_Module {
 	 * @return array
 	 */
 	private function get_promotions() {
-		$has_otter               = defined( 'OTTER_BLOCKS_VERSION' ) || $this->is_plugin_installed( 'otter-blocks' );
-		$had_otter_from_promo    = get_option( $this->option_otter, false );
-		$has_optimole            = defined( 'OPTIMOLE_VERSION' ) || $this->is_plugin_installed( 'optimole-wp' );
-		$had_optimole_from_promo = get_option( $this->option_optimole, false );
-		$has_rop                 = defined( 'ROP_LITE_VERSION' ) || $this->is_plugin_installed( 'tweet-old-post' );
-		$had_rop_from_promo      = get_option( $this->option_rop, false );
-		$has_woocommerce         = class_exists( 'WooCommerce' );
-		$has_sparks              = defined( 'SPARKS_WC_VERSION' ) || $this->is_plugin_installed( 'sparks-for-woocommerce' );
-		$has_ppom                = defined( 'PPOM_VERSION' ) || $this->is_plugin_installed( 'woocommerce-product-addon' );
-		$is_min_req_v            = version_compare( get_bloginfo( 'version' ), '5.8', '>=' );
-		$is_min_fse_v            = version_compare( get_bloginfo( 'version' ), '6.2', '>=' );
-		$current_theme           = wp_get_theme();
-		$has_neve_fse            = $current_theme->template === 'neve-fse' || $current_theme->parent() === 'neve-fse';
-		$has_enough_attachments  = $this->has_min_media_attachments();
-		$has_enough_old_posts    = $this->has_old_posts();
+		$has_otter                 = defined( 'OTTER_BLOCKS_VERSION' ) || $this->is_plugin_installed( 'otter-blocks' );
+		$had_otter_from_promo      = get_option( $this->option_otter, false );
+		$has_optimole              = defined( 'OPTIMOLE_VERSION' ) || $this->is_plugin_installed( 'optimole-wp' );
+		$had_optimole_from_promo   = get_option( $this->option_optimole, false );
+		$has_rop                   = defined( 'ROP_LITE_VERSION' ) || $this->is_plugin_installed( 'tweet-old-post' );
+		$had_rop_from_promo        = get_option( $this->option_rop, false );
+		$has_woocommerce           = class_exists( 'WooCommerce' );
+		$has_sparks                = defined( 'SPARKS_WC_VERSION' ) || $this->is_plugin_installed( 'sparks-for-woocommerce' );
+		$has_ppom                  = defined( 'PPOM_VERSION' ) || $this->is_plugin_installed( 'woocommerce-product-addon' );
+		$has_redirection_cf7       = defined( 'WPCF7_PRO_REDIRECT_PLUGIN_VERSION' ) || $this->is_plugin_installed( 'wpcf7-redirect' );
+		$had_redirection_cf7_promo = get_option( $this->option_redirection_cf7, false );
+		$has_hyve                  = defined( 'HYVE_LITE_VERSION' ) || $this->is_plugin_installed( 'hyve' ) || $this->is_plugin_installed( 'hyve-lite' );
+		$had_hyve_from_promo       = get_option( $this->option_hyve, false );
+		$has_hyve_conditions       = version_compare( get_bloginfo( 'version' ), '6.2', '>=' ) && $this->has_support_page();
+		$has_wfp_full_pay          = defined( 'WP_FULL_STRIPE_BASENAME' ) || $this->is_plugin_installed( 'wp-full-stripe-free' );
+		$had_wfp_from_promo        = get_option( $this->option_wp_full_pay, false );
+		$has_wfp_conditions        = $this->has_donate_page();
+		$is_min_req_v              = version_compare( get_bloginfo( 'version' ), '5.8', '>=' );
+		$current_theme             = wp_get_theme();
+		$has_neve                  = $current_theme->template === 'neve' || $current_theme->parent() === 'neve';
+		$has_neve_from_promo       = get_option( $this->option_neve, false );
+		$has_enough_attachments    = $this->has_min_media_attachments();
+		$has_enough_old_posts      = $this->has_old_posts();
+		$is_min_php_7_4            = version_compare( PHP_VERSION, '7.4', '>=' );
+		$has_feedzy                = defined( 'FEEDZY_BASEFILE' ) || $this->is_plugin_installed( 'feedzy-rss-feedss' );
+		$had_feedzy_from_promo     = get_option( $this->option_feedzy, false );
+		$has_masteriyo             = defined( 'MASTERIYO_VERSION' ) || $this->is_plugin_installed( 'learning-management-system' );
+		$had_masteriyo_from_promo  = get_option( $this->option_masteriyo, false );
+		$has_masteriyo_conditions  = $this->has_lms_tagline();
+		$is_min_php_7_2            = version_compare( PHP_VERSION, '7.2', '>=' );
 
 		$all = [
-			'optimole'    => [
+			'optimole'                   => [
 				'om-editor'      => [
-					'env'    => ! $has_optimole && $is_min_req_v && ! $had_optimole_from_promo,
-					'screen' => 'editor',
+					'env'     => ! $has_optimole && $is_min_req_v && ! $had_optimole_from_promo,
+					'screen'  => 'editor',
+					'delayed' => true,
 				],
 				'om-image-block' => [
-					'env'    => ! $has_optimole && $is_min_req_v && ! $had_optimole_from_promo,
-					'screen' => 'editor',
+					'env'     => ! $has_optimole && $is_min_req_v && ! $had_optimole_from_promo,
+					'screen'  => 'editor',
+					'delayed' => true,
 				],
 				'om-attachment'  => [
 					'env'    => ! $has_optimole && ! $had_optimole_from_promo,
@@ -348,31 +463,49 @@ class Promotions extends Abstract_Module {
 					'screen' => 'media',
 				],
 				'om-elementor'   => [
-					'env'    => ! $has_optimole && ! $had_optimole_from_promo && defined( 'ELEMENTOR_VERSION' ),
-					'screen' => 'elementor',
+					'env'     => ! $has_optimole && ! $had_optimole_from_promo && defined( 'ELEMENTOR_VERSION' ),
+					'screen'  => 'elementor',
+					'delayed' => true,
 				],
 			],
-			'otter'       => [
-				'blocks-css'        => [
-					'env'    => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
+			'feedzy_import'              => [
+				'feedzy-import' => [
+					'env'    => true,
+					'screen' => 'import',
+					'always' => true,
+				],
+			],
+			'feedzy_embed'               => [
+				'feedzy-editor' => [
+					'env'    => ! $has_feedzy && is_main_site() && ! $had_feedzy_from_promo,
 					'screen' => 'editor',
+				],
+			],
+			'otter'                      => [
+				'blocks-css'        => [
+					'env'     => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
+					'screen'  => 'editor',
+					'delayed' => true,
 				],
 				'blocks-animation'  => [
-					'env'    => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
-					'screen' => 'editor',
+					'env'     => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
+					'screen'  => 'editor',
+					'delayed' => true,
 				],
 				'blocks-conditions' => [
-					'env'    => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
-					'screen' => 'editor',
+					'env'     => ! $has_otter && $is_min_req_v && ! $had_otter_from_promo,
+					'screen'  => 'editor',
+					'delayed' => true,
 				],
 			],
-			'rop'         => [
+			'rop'                        => [
 				'rop-posts' => [
-					'env'    => ! $has_rop && ! $had_rop_from_promo && $has_enough_old_posts,
-					'screen' => 'edit-post',
+					'env'     => ! $has_rop && ! $had_rop_from_promo && $has_enough_old_posts,
+					'screen'  => 'edit-post',
+					'delayed' => true,
 				],
 			],
-			'woo_plugins' => [
+			'woo_plugins'                => [
 				'ppom'                  => [
 					'env'    => ! $has_ppom && $has_woocommerce,
 					'screen' => 'edit-product',
@@ -390,10 +523,35 @@ class Promotions extends Abstract_Module {
 					'screen' => 'edit-product',
 				],
 			],
-			'neve-fse'    => [
-				'neve-fse-themes-popular' => [
-					'env'    => ! $has_neve_fse && $is_min_fse_v,
+			'neve'                       => [
+				'neve-themes-popular' => [
+					'env'    => ! $has_neve && ! $has_neve_from_promo,
 					'screen' => 'themes-install-popular',
+				],
+			],
+			'redirection-cf7'            => [
+				'wpcf7' => [
+					'env'     => ! $has_redirection_cf7 && ! $had_redirection_cf7_promo,
+					'screen'  => 'wpcf7',
+					'delayed' => true,
+				],
+			],
+			'hyve'                       => [
+				'hyve-plugins-install' => [
+					'env'    => $is_min_php_7_4 && ! $has_hyve && ! $had_hyve_from_promo && $has_hyve_conditions,
+					'screen' => 'plugin-install',
+				],
+			],
+			'wp_full_pay'                => [
+				'wp-full-pay-plugins-install' => [
+					'env'    => ! $has_wfp_full_pay && ! $had_wfp_from_promo && $has_wfp_conditions,
+					'screen' => 'plugin-install',
+				],
+			],
+			'learning-management-system' => [
+				'masteriyo-plugins-install' => [
+					'env'    => $is_min_php_7_2 && ! $has_masteriyo && ! $had_masteriyo_from_promo && $has_masteriyo_conditions,
+					'screen' => 'plugin-install',
 				],
 			],
 		];
@@ -415,7 +573,6 @@ class Promotions extends Abstract_Module {
 				unset( $all[ $slug ] );
 			}
 		}
-
 		return $all;
 	}
 
@@ -442,18 +599,12 @@ class Promotions extends Abstract_Module {
 	/**
 	 * Get the last dismiss time of a promotion.
 	 *
-	 * @return int The timestamp of last dismiss, or install time - 4 days.
+	 * @return int | false The timestamp of last dismiss or false.
 	 */
 	private function get_last_dismiss_time() {
 		$dismissed = $this->get_upsells_dismiss_time();
 
-		if ( empty( $dismissed ) ) {
-			// we return the product install time - 4 days because we want to show the upsell after 3 days,
-			// and we move the product install time 4 days in the past.
-			return $this->product->get_install_time() - 4 * DAY_IN_SECONDS;
-		}
-
-		return max( array_values( $dismissed ) );
+		return empty( $dismissed ) ? false : max( array_values( $dismissed ) );
 	}
 
 	/**
@@ -464,17 +615,43 @@ class Promotions extends Abstract_Module {
 	private function filter_by_screen_and_merge() {
 		$current_screen = get_current_screen();
 
-		$is_elementor     = isset( $_GET['action'] ) && $_GET['action'] === 'elementor';
-		$is_media         = isset( $current_screen->id ) && $current_screen->id === 'upload';
-		$is_posts         = isset( $current_screen->id ) && $current_screen->id === 'edit-post';
-		$is_editor        = method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor();
-		$is_theme_install = isset( $current_screen->id ) && ( $current_screen->id === 'theme-install' || $current_screen->id === 'themes' );
-		$is_product       = isset( $current_screen->id ) && $current_screen->id === 'product';
+		$is_elementor      = isset( $_GET['action'] ) && $_GET['action'] === 'elementor';
+		$is_media          = isset( $current_screen->id ) && $current_screen->id === 'upload';
+		$is_posts          = isset( $current_screen->id ) && $current_screen->id === 'edit-post';
+		$is_editor         = method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor();
+		$is_theme_install  = isset( $current_screen->id ) && ( $current_screen->id === 'theme-install' );
+		$is_plugin_install = isset( $current_screen->id ) && ( $current_screen->id === 'plugin-install' );
+		$is_product        = isset( $current_screen->id ) && $current_screen->id === 'product';
+		$is_import         = isset( $current_screen->id ) && $current_screen->id === 'import';
+		$is_cf7_install    = isset( $current_screen->id ) && function_exists( 'str_contains' ) ? str_contains( $current_screen->id, 'page_wpcf7' ) : false;
 
-		$return = [];
-
+		$return               = [];
+		$product_install_time = (int) $this->product->get_install_time();
+		$is_older             = time() > ( $product_install_time + ( 3 * DAY_IN_SECONDS ) );
+		$is_newer             = time() < ( $product_install_time + ( 6 * HOUR_IN_SECONDS ) );
 		foreach ( $this->promotions as $slug => $promos ) {
 			foreach ( $promos as $key => $data ) {
+
+				$data = wp_parse_args(
+					$data,
+					[
+						'delayed' => false,
+						'always'  => false,
+					] 
+				);
+
+				if (
+					! $this->debug &&
+					(
+						( $data['delayed'] === true && ! $is_older ) || // Skip promotions that are delayed for 3 days.
+						$is_newer // Skip promotions for the first 6 hours after install.
+					)
+					&& ! $data['always']
+				) {
+					unset( $this->promotions[ $slug ][ $key ] );
+
+					continue;
+				}
 				switch ( $data['screen'] ) {
 					case 'media-editor':
 						if ( ! $is_media && ! $is_editor ) {
@@ -488,6 +665,11 @@ class Promotions extends Abstract_Module {
 						break;
 					case 'editor':
 						if ( ! $is_editor || $is_elementor ) {
+							unset( $this->promotions[ $slug ][ $key ] );
+						}
+						break;
+					case 'import':
+						if ( ! $is_import ) {
 							unset( $this->promotions[ $slug ][ $key ] );
 						}
 						break;
@@ -508,6 +690,16 @@ class Promotions extends Abstract_Module {
 						break;
 					case 'themes-install-popular':
 						if ( ! $is_theme_install ) {
+							unset( $this->promotions[ $slug ][ $key ] );
+						}
+						break;
+					case 'wpcf7':
+						if ( ! $is_cf7_install ) {
+							unset( $this->promotions[ $slug ][ $key ] );
+						}
+						break;
+					case 'plugin-install':
+						if ( ! $is_plugin_install ) {
 							unset( $this->promotions[ $slug ][ $key ] );
 						}
 						break;
@@ -545,15 +737,29 @@ class Promotions extends Abstract_Module {
 			if ( $this->get_upsells_dismiss_time( 'rop-posts' ) === false ) {
 				add_action( 'admin_notices', [ $this, 'render_rop_dash_notice' ] );
 			}
-			if ( $this->get_upsells_dismiss_time( 'neve-fse-themes-popular' ) === false ) {
-				add_action( 'admin_notices', [ $this, 'render_neve_fse_themes_notice' ] );
+			if ( $this->get_upsells_dismiss_time( 'neve-themes-popular' ) === false ) {
+				add_action( 'admin_notices', [ $this, 'render_neve_themes_notice' ] );
+			}
+			if ( $this->get_upsells_dismiss_time( 'redirection-cf7' ) === false ) {
+				add_action( 'admin_notices', [ $this, 'render_redirection_cf7_notice' ] );
+			}
+			if ( $this->get_upsells_dismiss_time( 'hyve-plugins-install' ) === false ) {
+				add_action( 'admin_notices', [ $this, 'render_hyve_notice' ] );
 			}
 
+			if ( $this->get_upsells_dismiss_time( 'wp-full-pay-plugins-install' ) === false ) {
+				add_action( 'admin_notices', [ $this, 'render_wp_full_pay_notice' ] );
+			}
+
+			if ( $this->get_upsells_dismiss_time( 'masteriyo-plugins-install' ) === false ) {
+				add_action( 'admin_notices', [ $this, 'render_masteriyo_notice' ] );
+			}
+
+			add_action( 'load-import.php', [ $this, 'add_import' ] );
 			$this->load_woo_promos();
 
 			return;
 		}
-
 		switch ( $slug ) {
 			case 'om-editor':
 			case 'om-image-block':
@@ -573,14 +779,21 @@ class Promotions extends Abstract_Module {
 				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
 				add_action( 'admin_notices', [ $this, 'render_rop_dash_notice' ] );
 				break;
+			case 'feedzy-import':
+				add_action( 'load-import.php', [ $this, 'add_import' ] );
+
+				break;
+			case 'feedzy-editor':
+				add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue' ] );
+				break;
 			case 'ppom':
 			case 'sparks-wishlist':
 			case 'sparks-announcement':
 			case 'sparks-product-reviews':
 				$this->load_woo_promos();
 				break;
-			case 'neve-fse-themes-popular':
-				// Remove any other notifications if Neve FSE promotion is showing
+			case 'neve-themes-popular':
+				// Remove any other notifications if Neve promotion is showing
 				remove_action( 'admin_notices', array( 'ThemeisleSDK\Modules\Notification', 'show_notification' ) );
 				remove_action(
 					'wp_ajax_themeisle_sdk_dismiss_notice',
@@ -593,11 +806,46 @@ class Promotions extends Abstract_Module {
 				remove_action( 'admin_head', array( 'ThemeisleSDK\Modules\Notification', 'setup_notifications' ) );
 				// Add required actions to display this notification
 				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
-				add_action( 'admin_notices', [ $this, 'render_neve_fse_themes_notice' ] );
+				add_action( 'admin_notices', [ $this, 'render_neve_themes_notice' ] );
+				break;
+			case 'wpcf7':
+				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+				add_action( 'admin_notices', [ $this, 'render_redirection_cf7_notice' ] );
+				break;
+			case 'hyve-plugins-install':
+				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+				add_action( 'admin_notices', [ $this, 'render_hyve_notice' ] );
+				break;
+			case 'wp-full-pay-plugins-install':
+				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+				add_action( 'admin_notices', [ $this, 'render_wp_full_pay_notice' ] );
+				break;
+			case 'masteriyo-plugins-install':
+				add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+				add_action( 'admin_notices', [ $this, 'render_masteriyo_notice' ] );
 				break;
 		}
 	}
 
+	/**
+	 * Add import row.
+	 *
+	 * @return void
+	 */
+	public function add_import() {
+		global $wp_importers;
+		if ( isset( $wp_importers['feedzy-rss-feeds'] ) ) {
+			return;
+		}
+		$wp_importers['feedzy-rss-feeds'] = array( // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			'Feedzy',
+			sprintf( Loader::$labels['promotions']['feedzy']['import_desc'], '<span style="float: left; font-style: italic;margin-top:0.4em;">', $this->product->get_friendly_name(), '</span>' ),
+			'install' => 'feedzy-rss-feeds',
+		);
+		if ( defined( 'FEEDZY_BASEFILE' ) ) {
+			unset( $wp_importers['feedzy-rss-feeds']['install'] );
+		}
+	}
 	/**
 	 * Render dashboard notice.
 	 */
@@ -623,31 +871,66 @@ class Promotions extends Abstract_Module {
 		$asset_file        = require $themeisle_sdk_max_path . '/assets/js/build/promos/index.asset.php';
 		$deps              = array_merge( $asset_file['dependencies'], [ 'updates' ] );
 
+		$themes                                = wp_get_themes();
+		$neve_action                           = isset( $themes['neve'] ) ? 'activate' : 'install';
+		$labels                                = Loader::$labels['promotions'];
+		$labels['feedzy']['editor_recommends'] = sprintf(
+			$labels['feedzy']['editor_recommends'],
+			$this->product->get_friendly_name(),
+			'<a target="_blank" href="' . add_query_arg(
+				array(
+					'tab'                  => 'plugin-information',
+					'plugin'               => 'feedzy-rss-feeds',
+					'_wpnonce'             => wp_create_nonce( 'activate-plugin_feedzy-rss-feeds' ),
+					'feedzy_reference_key' => 'e-' . $this->product->get_key(),
+				),
+				network_admin_url( 'plugin-install.php' )
+			) . '">',
+			'</a>' 
+		);
 		wp_register_script( $handle, $themeisle_sdk_src . 'assets/js/build/promos/index.js', $deps, $asset_file['version'], true );
 		wp_localize_script(
 			$handle,
 			'themeisleSDKPromotions',
 			[
-				'debug'                 => $this->debug,
-				'labels'                => [
-					'optimole' => Loader::$labels['promotions']['optimole'],
-				],
-				'email'                 => $user->user_email,
-				'showPromotion'         => $this->loaded_promo,
-				'optionKey'             => $this->option_main,
-				'product'               => $this->product->get_name(),
-				'option'                => empty( $saved ) ? new \stdClass() : $saved,
-				'nonce'                 => wp_create_nonce( 'wp_rest' ),
-				'assets'                => $themeisle_sdk_src . 'assets/images/',
-				'optimoleApi'           => esc_url( rest_url( 'optml/v1/register_service' ) ),
-				'optimoleActivationUrl' => $this->get_plugin_activation_link( 'optimole-wp' ),
-				'otterActivationUrl'    => $this->get_plugin_activation_link( 'otter-blocks' ),
-				'ropActivationUrl'      => $this->get_plugin_activation_link( 'tweet-old-post' ),
-				'optimoleDash'          => esc_url( add_query_arg( [ 'page' => 'optimole' ], admin_url( 'upload.php' ) ) ),
-				'ropDash'               => esc_url( add_query_arg( [ 'page' => 'TweetOldPost' ], admin_url( 'admin.php' ) ) ),
-				'neveFSEMoreUrl'        => tsdk_utmify( 'https://themeisle.com/themes/neve-fse/', 'neve-fse-themes-popular', 'theme-install' ),
+				'debug'                  => $this->debug,
+				'labels'                 => $labels,
+				'email'                  => $user->user_email,
+				'showPromotion'          => $this->loaded_promo,
+				'optionKey'              => $this->option_main,
+				'product'                => $this->product->get_name(),
+				'option'                 => empty( $saved ) ? new \stdClass() : $saved,
+				'nonce'                  => wp_create_nonce( 'wp_rest' ),
+				'assets'                 => $themeisle_sdk_src . 'assets/images/',
+				'optimoleApi'            => esc_url( rest_url( 'optml/v1/register_service' ) ),
+				'optimoleActivationUrl'  => $this->get_plugin_activation_link( 'optimole-wp' ),
+				'otterActivationUrl'     => $this->get_plugin_activation_link( 'otter-blocks' ),
+				'ropActivationUrl'       => $this->get_plugin_activation_link( 'tweet-old-post' ),
+				'optimoleDash'           => esc_url( add_query_arg( [ 'page' => 'optimole' ], admin_url( 'upload.php' ) ) ),
+				'ropDash'                => esc_url( add_query_arg( [ 'page' => 'TweetOldPost' ], admin_url( 'admin.php' ) ) ),
 				// translators: %s is the product name.
-				'title'                 => esc_html( sprintf( Loader::$labels['promotions']['recommended'], $this->product->get_name() ) ),
+				'title'                  => esc_html( sprintf( Loader::$labels['promotions']['recommended'], $this->product->get_name() ) ),
+				'redirectionCF7MoreUrl'  => tsdk_utmify( 'https://docs.themeisle.com/collection/2014-redirection-for-contact-form-7', 'redirection-for-contact-form-7', 'plugin-install' ),
+				'rfCF7ActivationUrl'     => $this->get_plugin_activation_link( 'wpcf7-redirect' ),
+				'cf7Dash'                => esc_url( add_query_arg( [ 'page' => 'wpcf7-new' ], admin_url( 'admin.php' ) ) ),
+				'hyveActivationUrl'      => $this->get_plugin_activation_link( 'hyve-lite' ),
+				'hyveDash'               => esc_url( add_query_arg( [ 'page' => 'wpfs-settings-stripe' ], admin_url( 'admin.php' ) ) ),
+				'wpFullPayActivationUrl' => $this->get_plugin_activation_link( 'wp-full-stripe-free' ),
+				'wpFullPayDash'          => esc_url( add_query_arg( [ 'page' => 'wpfs-settings-stripe' ], admin_url( 'admin.php' ) ) ),
+				'masteriyoActivationUrl' => $this->get_plugin_activation_link( 'masteriyo' ),
+				'masteriyoDash'          => esc_url( add_query_arg( [ 'page' => 'masteriyo-onboard' ], admin_url( 'index.php' ) ) ),
+				'nevePreviewURL'         => esc_url( add_query_arg( [ 'theme' => 'neve' ], admin_url( 'theme-install.php' ) ) ),
+				'neveAction'             => $neve_action,
+				'activateNeveURL'        => esc_url(
+					add_query_arg(
+						[
+							'action'     => 'activate',
+							'stylesheet' => 'neve',
+							'_wpnonce'   => wp_create_nonce( 'switch-theme_neve' ),
+						],
+						admin_url( 'themes.php' )
+					)
+				),
 			]
 		);
 		wp_enqueue_script( $handle );
@@ -668,10 +951,38 @@ class Promotions extends Abstract_Module {
 	}
 
 	/**
-	 * Render Neve FSE Themes notice.
+	 * Render Neve Themes notice.
 	 */
-	public function render_neve_fse_themes_notice() {
-		echo '<div id="ti-neve-fse-notice" class="notice notice-info ti-sdk-neve-fse-notice"></div>';
+	public function render_neve_themes_notice() {
+		echo '<div id="ti-neve-notice" class="notice notice-info ti-sdk-om-notice"></div>';
+	}
+
+	/**
+	 * Render Hyve notice.
+	 */
+	public function render_hyve_notice() {
+		echo '<div id="ti-hyve-notice" class="notice notice-info ti-sdk-om-notice"></div>';
+	}
+
+	/**
+	 * Render WP Full Pay notice.
+	 */
+	public function render_wp_full_pay_notice() {
+		echo '<div id="ti-wp-full-pay-notice" class="notice notice-info ti-sdk-om-notice"></div>';
+	}
+
+	/**
+	 * Render Redirection for CF7 notice.
+	 */
+	public function render_redirection_cf7_notice() {
+		echo '<div id="ti-redirection-cf7-notice" class="notice notice-info ti-sdk-om-notice"></div>';
+	}
+
+	/**
+	 * Render Masteriyo notice.
+	 */
+	public function render_masteriyo_notice() {
+		echo '<div id="ti-masteriyo-notice" class="notice notice-info ti-sdk-om-notice"></div>';
 	}
 
 	/**
@@ -693,7 +1004,7 @@ class Promotions extends Abstract_Module {
 
 		$meta = wp_get_attachment_metadata( $post->ID );
 
-		if ( isset( $meta['filesize'] ) && $meta['filesize'] < 200000 ) {
+		if ( isset( $meta['filesize'] ) && $meta['filesize'] < 100000 ) {
 			return $fields;
 		}
 
@@ -923,7 +1234,6 @@ class Promotions extends Abstract_Module {
 				content: url("data:image/svg+xml,%3Csvg fill='%23135e96' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='<?php echo esc_attr( $icon ); ?>'/%3E%3C/svg%3E") !important;
 				min-width: 13px;
 				max-width: 13px;
-				margin: auto;
 			}
 
 			.tisdk-suggestions_options.active a::before {
@@ -1083,5 +1393,80 @@ class Promotions extends Abstract_Module {
 
 		wp_send_json( $response );
 		wp_die();
+	}
+
+	/**
+	 * Check if the user has a support page.
+	 */
+	public function has_support_page() {
+		$transient_name = 'tisdk_has_support_page';
+		$has_support    = get_transient( $transient_name );
+
+		if ( false === $has_support ) {
+			global $wpdb;
+
+			// We use %i escape identifier that was added in WP 6.2.0, hence need to ignore PHPCS warning.
+			// We only show this notice to users on higher version as that is the minimum for Hyve as well.
+			$query = $wpdb->get_var( //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+					'SELECT ID FROM %i WHERE post_type = %s AND post_status = %s AND post_title LIKE %s LIMIT 1', // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedPlaceholder
+					$wpdb->posts,
+					'page',
+					'publish',
+					'%support%'
+				)
+			);
+
+			$has_support = $query ? 'yes' : 'no';
+
+			set_transient( $transient_name, $has_support, 7 * DAY_IN_SECONDS );
+		}
+
+		return 'yes' === $has_support;
+	}
+
+	/**
+	 * Check if the user has a donate page.
+	 */
+	public function has_donate_page() {
+		$transient_name = 'tisdk_has_donate_page';
+		$has_donate     = get_transient( $transient_name );
+
+		if ( false === $has_donate ) {
+			global $wpdb;
+
+			$query = $wpdb->get_var( //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->prepare(
+					'SELECT ID FROM ' . $wpdb->posts . ' WHERE post_type = %s AND post_status = %s AND post_title LIKE %s LIMIT 1',
+					'page',
+					'publish',
+					'%donate%'
+				)
+			);
+
+			$has_donate = $query ? 'yes' : 'no';
+
+			set_transient( $transient_name, $has_donate, 7 * DAY_IN_SECONDS );
+		}
+
+		return 'yes' === $has_donate;
+	}
+
+	/**
+	 * Check if the tagline contains LMS related keywords.
+	 *
+	 * @return bool True if the tagline contains LMS-related keywords, false otherwise.
+	 */
+	public function has_lms_tagline() {
+		$tagline      = strtolower( get_bloginfo( 'description' ) );
+		$lms_keywords = array( 'learning', 'courses' );
+
+		foreach ( $lms_keywords as $keyword ) {
+			if ( strpos( $tagline, $keyword ) !== false ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

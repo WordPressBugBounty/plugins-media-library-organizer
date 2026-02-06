@@ -3,7 +3,7 @@
  * Filesystem class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -74,7 +74,7 @@ class Media_Library_Organizer_Filesystem {
 
 		// Adds a file to the WordPress Media Library in the same way as the uploader, except
 		// we supply the data.
-		$result = media_handle_sideload( $file_data, $post_id );
+		$result = media_handle_sideload( $file_data, $post_id ); // @phpstan-ignore-line
 
 		/**
 		 * Action hook to restore filters / actions that might have been disabled on the

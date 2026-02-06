@@ -4,7 +4,7 @@
  * @since 	1.4.9
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 for ( const block in media_library_organizer_quicktags ) {

@@ -39,6 +39,9 @@ abstract class Abstract_Module {
 		'multiple-pages-generator-by-porthas' => 'multiple-pages-generator-by-porthas/porthas-multi-pages-generator.php',
 		'sparks-for-woocommerce'              => 'sparks-for-woocommerce/sparks-for-woocommerce.php',
 		'templates-patterns-collection'       => 'templates-patterns-collection/templates-patterns-collection.php',
+		'wpcf7-redirect'                      => 'wpcf7-redirect/wpcf7-redirect.php',
+		'wp-full-stripe-free'                 => 'wp-full-stripe-free/wp-full-stripe.php',
+		'learning-management-system'          => 'learning-management-system/lms.php',
 	];
 
 	/**
@@ -111,7 +114,7 @@ abstract class Abstract_Module {
 		 * hence we also need to check that the path does not point to the theme else this will break the URL.
 		 * References: https://github.com/Codeinwp/neve-pro-addon/issues/2403
 		 */
-		if ( $this->product->is_plugin() && false === strpos( $themeisle_sdk_max_path, get_template_directory() ) ) {
+		if ( ( $this->product->is_plugin() || $this->product->is_theme() ) && false === strpos( $themeisle_sdk_max_path, get_template_directory() ) ) {
 			return plugins_url( '/', $themeisle_sdk_max_path . '/themeisle-sdk/' );
 		};
 
@@ -217,5 +220,14 @@ abstract class Abstract_Module {
 		$plugin = isset( $this->plugin_paths[ $plugin ] ) ? $this->plugin_paths[ $plugin ] : $plugin . '/' . $plugin . '.php';
 
 		return is_plugin_active( $plugin );
+	}
+
+	/**
+	 * Get the current date.
+	 * 
+	 * @return \DateTime The date time.
+	 */
+	public function get_current_date() {
+		return apply_filters( 'themeisle_sdk_current_date', new \DateTime( 'now' ) );
 	}
 }

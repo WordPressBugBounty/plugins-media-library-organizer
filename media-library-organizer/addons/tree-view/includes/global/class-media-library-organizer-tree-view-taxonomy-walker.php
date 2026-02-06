@@ -3,7 +3,7 @@
  * Tree View Taxonomy Walker class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**

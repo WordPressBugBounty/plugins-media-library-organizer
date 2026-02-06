@@ -3,15 +3,15 @@
  * Media Library Organizer WordPress Plugin.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  *
  * @wordpress-plugin
  * Plugin Name: Media Library Organizer
  * Plugin URI: https://wpmedialibrary.com
- * Version: 1.6.5
- * Author: Optimole
+ * Version: 2.0.4
+ * Author: Themeisle
  * License: GPLv2 or later
- * Author URI: https://optimole.com
+ * Author URI: https://themeisle.com
  * Description: Organize and Search your Media Library, quicker and easier.
  * Text Domain: media-library-organizer
  * WordPress Available:  yes
@@ -28,7 +28,7 @@ if ( class_exists( 'Media_Library_Organizer' ) ) {
 }
 
 // Define Plugin version and build date.
-define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '1.6.5' );
+define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.0.4' );
 define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_BUILD_DATE', '2022-11-15 18:00:00' );
 
 // Define Plugin paths.

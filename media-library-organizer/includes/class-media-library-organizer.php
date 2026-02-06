@@ -3,14 +3,14 @@
  * Media Library Organizer class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
  * Main Media Library Organizer class, used to load the Plugin.
  *
  * @package   Media_Library_Organizer
- * @author    WP Media Library
+ * @author    Themeisle
  * @version   1.0.0
  */
 class Media_Library_Organizer {
@@ -61,6 +61,13 @@ class Media_Library_Organizer {
 	public $classes;
 
 	/**
+	 * Is REST Request.
+	 *
+	 * @var bool $is_rest
+	 */
+	public $is_rest;
+
+	/**
 	 * Constructor. Acts as a bootstrap to load the rest of the plugin
 	 *
 	 * @since    1.0.0
@@ -71,7 +78,7 @@ class Media_Library_Organizer {
 		$this->plugin                    = new stdClass();
 		$this->plugin->name              = 'media-library-organizer';
 		$this->plugin->displayName       = 'Media Library Organizer';
-		$this->plugin->author_name       = 'Media Library Organizer';
+		$this->plugin->author_name       = 'Themeisle';
 		$this->plugin->version           = MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION;
 		$this->plugin->buildDate         = MEDIA_LIBRARY_ORGANIZER_PLUGIN_BUILD_DATE;
 		$this->plugin->requires          = '5.0';
@@ -79,14 +86,10 @@ class Media_Library_Organizer {
 		$this->plugin->folder            = MEDIA_LIBRARY_ORGANIZER_PLUGIN_PATH;
 		$this->plugin->url               = MEDIA_LIBRARY_ORGANIZER_PLUGIN_URL;
 		$this->plugin->documentation_url = 'https://wpmedialibrary.com/documentation';
-		$this->plugin->support_url       = 'https://wpmedialibrary.com/support';
+		$this->plugin->support_url       = 'https://store.themeisle.com/contact';
 		$this->plugin->upgrade_url       = 'https://wpmedialibrary.com/pricing';
 		$this->plugin->review_name       = 'media-library-organizer';
-		$this->plugin->review_notice     = sprintf(
-			/* translators: Plugin Name */
-			__( 'Thanks for using %s to organize your Media Library!', 'media-library-organizer' ),
-			$this->plugin->displayName
-		);
+		$this->plugin->namespace         = 'mlo';
 
 		// Dashboard Submodule.
 		if ( ! class_exists( 'WPZincDashboardWidget' ) ) {
@@ -94,11 +97,8 @@ class Media_Library_Organizer {
 		}
 		$this->dashboard = new WPZincDashboardWidget( $this->plugin );
 
-		// License Submodule.
-		// If the Pro version is installed, make its licensing object available here for screens.
-		if ( function_exists( 'Media_Library_Organizer_Pro' ) && class_exists( 'LicensingUpdateManager' ) ) {
-			$this->licensing = Media_Library_Organizer_Pro()->licensing;
-		}
+		$rest_url      = rest_get_url_prefix();
+		$this->is_rest = isset( $_SERVER['REQUEST_URI'] ) && strpos( sanitize_url( $_SERVER['REQUEST_URI'] ), '/' . $rest_url . '/' ) !== false;
 
 		// Initialize Free Addons.
 		$this->initialize_free_addons();
@@ -106,6 +106,7 @@ class Media_Library_Organizer {
 		// Defer loading of Plugin Classes.
 		add_action( 'init', array( $this, 'initialize' ), 1 );
 		add_action( 'init', array( $this, 'upgrade' ), 2 );
+		add_action( 'init', array( $this, 'initalize_rest' ), 3 );
 
 		// Localization.
 		add_action( 'plugins_loaded', array( $this, 'load_language_files' ) );
@@ -169,6 +170,11 @@ class Media_Library_Organizer {
 	 * @since   1.0.9
 	 */
 	private function initialize_admin() {
+
+		if ( $this->is_rest ) {
+			$this->classes->admin = new Media_Library_Organizer_Admin( self::$instance );
+			return;
+		}
 
 		// Bail if this request isn't for the WordPress Administration interface.
 		if ( ! is_admin() ) {
@@ -446,5 +452,17 @@ class Media_Library_Organizer {
 		}
 
 		return self::$instance;
+	}
+
+	/**
+	 * Initializes REST API classes.
+	 */
+	public function initalize_rest() {
+
+		if ( ! $this->is_rest ) {
+			return;
+		}
+
+		$this->classes->rest = new Media_Library_Organizer_Rest( self::$instance );
 	}
 }

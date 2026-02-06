@@ -56,19 +56,19 @@
 					height: 38px;
 					margin: 0;
 					padding: 0;
-					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder.svg) center no-repeat;
+					background: url('@/_modules/dashboard/feather/folder.svg') center no-repeat;
 					background-size: 16px 16px;
 				}
 
 				&.jstree-closed {
 					> i.jstree-ocl {
-						background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder-plus.svg) center no-repeat;
+						background: url('@/_modules/dashboard/feather/folder-plus.svg') center no-repeat;
 						background-size: 16px 16px;
 					}
 				}
 				&.jstree-open {
 					> i.jstree-ocl {
-						background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/folder-minus.svg) center no-repeat;
+						background: url('@/_modules/dashboard/feather/folder-minus.svg') center no-repeat;
 						background-size: 16px 16px;
 					}
 				}
@@ -112,13 +112,13 @@
 
 				&.media-library-organizer-tree-view-delete {
 					right: 35px;
-					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/trash-2.svg) 50% 50% no-repeat;
+					background: url('@/_modules/dashboard/feather/trash-2.svg') 50% 50% no-repeat;
 					background-size: 18px 18px;
 				}
 
 				&.media-library-organizer-tree-view-edit {
 					right: 60px;
-					background: url(../../../../../../media-library-organizer/_modules/dashboard/feather/edit.svg) 50% 50% no-repeat;
+					background: url('@/_modules/dashboard/feather/edit.svg') 50% 50% no-repeat;
 					background-size: 18px 18px;
 				}
 			}
@@ -191,6 +191,18 @@
 
 				button {
 					width: 32%;
+				}
+			}
+		}
+	}
+
+	#posts-filter {
+		.search-form {
+			&:not(.media-toolbar-primary) {
+				display: flex;
+
+				p.search-box {
+					flex-wrap: nowrap;
 				}
 			}
 		}

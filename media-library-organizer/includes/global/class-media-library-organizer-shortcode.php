@@ -3,7 +3,7 @@
  * Gallery Shortcode class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -96,7 +96,7 @@ class Media_Library_Organizer_Shortcode {
 	 *
 	 * @since   1.4.9
 	 *
-	 * @return  array   Shortcodes
+	 * @return  array|mixed   Shortcodes
 	 */
 	public function get() {
 

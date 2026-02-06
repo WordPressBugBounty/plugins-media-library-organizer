@@ -5,7 +5,7 @@
  * @since 	1.0.0
  *
  * @package Media_Library_Organizer
- * @author 	Media Library Organizer
+ * @author 	Themeisle
  */
 
 /**
@@ -1185,6 +1185,49 @@ function mediaLibraryOrganizerGridViewRefresh() {
 }
 
 /**
+ * Grid View: Initialize Lazy Loading for Images
+ */
+function mediaLibraryOrganizerGridViewInitializeLazyLoading() {
+	// Bail if we're not in grid view.
+	if (media_library_organizer_media.media_view !== 'grid') {
+		return;
+	}
+
+	(function ($, _) {
+
+		/**
+		 * Extend wp.media.view.Attachment to add lazy loading to images.
+		 *
+		 * @since 	1.0.0
+		 */
+		_.extend(
+			wp.media.view.Attachment.prototype,
+			{
+				/**
+				 * Override the template method to add loading="lazy" attribute to images.
+				 *
+				 * @param   object  view    View data.
+				 * @return  string          Modified HTML template.
+				 */
+				template: function (view) {
+						let html = wp.media.template('attachment')(view);
+
+						// Add loading attribute only if not present
+						html = html.replace(/<img(?![^>]*\bloading=)/gi, '<img loading="lazy"');
+
+						// Add decoding attribute only if not present
+						html = html.replace(/<img(?![^>]*\bdecoding=)/gi, '<img decoding="async"');
+
+						return html;
+					}
+				}
+			);
+
+	})(jQuery, _);
+
+}
+
+/**
  * Update multipart_params when the uploader is first initialized.
  *
  * @since 	1.2.3
@@ -1211,6 +1254,31 @@ wp.media.events.on(
 	}
 );
 
+/**
+ * Update multipart_params when a file is added to the upload queue.
+ * This ensures we get the latest selected_term from URL query parameters.
+ */
+wp.media.events.on(
+	'mlo:grid:attachment:upload:added',
+	function () {
+
+		if (mediaLibraryOrganizerUploader && typeof mediaLibraryOrganizerUploader.uploader !== 'undefined') {
+			const selected_terms = {};
+
+			const urlParams = new URLSearchParams(window.location.search);
+
+			for (const taxonomy_name in media_library_organizer_media.taxonomies) {
+				const queryParamValue = urlParams.get(taxonomy_name);
+
+				// Use query parameter if available, otherwise fall back to the default selected_term
+				selected_terms[taxonomy_name] = queryParamValue || media_library_organizer_media.taxonomies[taxonomy_name].selected_term;
+			}
+
+			mediaLibraryOrganizerUploader.uploader.uploader.settings.multipart_params.media_library_organizer = selected_terms;
+		}
+
+	}
+);
 
 /**
  * Update multipart_params when a Taxonomy filter is changed,
@@ -1368,6 +1436,9 @@ function mediaLibraryOrganizerInitialize() {
 
 	// Initialize Grid View Edit Attachment Listeners.
 	mediaLibraryOrganizerGridViewInitializeEditAttachmentListeners();
+
+	// Initialize Grid View Lazy Loading.
+	mediaLibraryOrganizerGridViewInitializeLazyLoading();
 
 	// Initialize List View Selectize.
 	jQuery( document ).ready(

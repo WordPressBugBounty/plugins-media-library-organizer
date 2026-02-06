@@ -3,7 +3,7 @@
  * Import class.
  *
  * @package Media_Library_Organizer
- * @author WP Media Library
+ * @author Themeisle
  */
 
 /**
@@ -61,7 +61,7 @@ class Media_Library_Organizer_Import {
 
 		// Enhanced Media Library.
 		$eml = get_option( 'wpuxss_eml_version' );
-		if ( ! empty( $eml ) && false !== $eml ) {
+		if ( ! empty( $eml ) ) {
 			$import_sources['import_enhanced_media_library'] = array(
 				'name'          => 'import_enhanced_media_library',
 				'label'         => __( 'Import from Enhanced Media Library', 'media-library-organizer' ),
@@ -286,7 +286,7 @@ class Media_Library_Organizer_Import {
 				}
 
 				// Create Term.
-				$result = $this->create_term( $child_term->name, $child_term->description, ( isset( $term_mappings[ $child_term->parent ] ) ? $term_mappings[ $child_term->parent ] : '' ) ); // @phpstan-ignore-line.
+				$result = $this->create_term( $child_term->name, $child_term->description, ( isset( $term_mappings[ $child_term->parent ] ) ? $term_mappings[ $child_term->parent ] : '' ) );
 
 				// Skip if an error occured.
 				if ( is_wp_error( $result ) ) {
@@ -300,7 +300,7 @@ class Media_Library_Organizer_Import {
 				}
 
 				// Map this Term.
-				$term_mappings[ $child_term->term_taxonomy_id ] = $result; // @phpstan-ignore-line.
+				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
 			}
 		}
 
@@ -470,7 +470,7 @@ class Media_Library_Organizer_Import {
 	 * @since   1.0.0
 	 *
 	 * @param   array $term_ids   Term IDs.
-	 * @return  array               Attachment to Term ID Relationships
+	 * @return  array|null        Attachment to Term ID Relationships
 	 */
 	private function get_term_relationships( $term_ids ) {
 
