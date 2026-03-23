@@ -85,7 +85,7 @@ class Media_Library_Organizer {
 		$this->plugin->tested            = '5.9.3';
 		$this->plugin->folder            = MEDIA_LIBRARY_ORGANIZER_PLUGIN_PATH;
 		$this->plugin->url               = MEDIA_LIBRARY_ORGANIZER_PLUGIN_URL;
-		$this->plugin->documentation_url = 'https://wpmedialibrary.com/documentation';
+		$this->plugin->documentation_url = 'https://docs.themeisle.com/media-library-organizer/';
 		$this->plugin->support_url       = 'https://store.themeisle.com/contact';
 		$this->plugin->upgrade_url       = 'https://wpmedialibrary.com/pricing';
 		$this->plugin->review_name       = 'media-library-organizer';
@@ -185,6 +185,7 @@ class Media_Library_Organizer {
 		$this->classes->admin_ajax = new Media_Library_Organizer_Admin_AJAX( self::$instance );
 		$this->classes->export     = new Media_Library_Organizer_Export( self::$instance );
 		$this->classes->import     = new Media_Library_Organizer_Import( self::$instance );
+		$this->classes->edit       = new Media_Library_Organizer_Edit();
 	}
 
 	/**
@@ -256,6 +257,7 @@ class Media_Library_Organizer {
 		$this->classes->taxonomies   = new Media_Library_Organizer_Taxonomies( self::$instance );
 		$this->classes->upload       = new Media_Library_Organizer_Upload( self::$instance );
 		$this->classes->user_option  = new Media_Library_Organizer_User_Option( self::$instance );
+		$this->classes->gallery      = new Media_Library_Organizer_Gallery_Block();
 	}
 
 	/**

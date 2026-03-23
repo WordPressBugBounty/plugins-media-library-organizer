@@ -239,6 +239,7 @@ function mediaLibraryOrganizerTreeViewGridInitDraggable() {
 			{
 				appendTo: 'body', // Ensure dragging div is above all other elements.
 				revert: true,
+				delay: 150,
 				cursorAt: {
 					top: 40,
 					left: 10

@@ -84,7 +84,7 @@ if ( ! class_exists( 'Media_Library_Organizer_Defaults_Admin' ) ) {
 				$this->base->plugin->name . '-settings',
 				'media_library_organizer_defaults_settings',
 				array(
-					'delete_ruleset_message' => __( 'Are you sure you want to delete this ruleset?', 'media-library-organizer' ),
+					'delete_ruleset_message' => __( 'Are you sure you want to delete this ruleset? This action cannot be undone.', 'media-library-organizer' ),
 				)
 			);
 		}

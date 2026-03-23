@@ -1,3 +1,31 @@
+####   Version 2.1.0 (2026-03-23)
+
+### New Features
+
+- Added MLO Gallery block for displaying dynamic image galleries from media categories and folders, with grid, masonry, carousel, and justified layouts.
+- Added Replace Media functionality to swap files while preserving all metadata, categories, and references across your site.
+- Added drag-and-drop folder reordering to arrange folders in any custom order.
+- Added double-click to rename folders directly in the sidebar.
+- Added media upload status panel showing real-time progress, success, and error states during file uploads.
+- Added import support for Media Library Assistant, Mediamatic, and WP Real Media Library.
+
+### Enhancements
+
+- Redesigned the sidebar UI to match your WordPress color scheme for a more native look and feel.
+- Added Move option to the folder context menu for easier folder reorganization.
+- Improved drag-and-drop with better hierarchy validation, cross-parent moves, and root-level drop zone.
+- Improved error messages and UI strings across the plugin for clarity and consistency.
+
+### Bug Fixes
+
+- Fixed folders not being created under the selected parent folder.
+- Fixed drag issue when reordering items in grid mode.
+- Fixed media upload panel stacking order (z-index) to prevent overlap with other elements.
+- Fixed compatibility with custom columns in the media library list view.
+- Fixed handling of empty columns during output module installation.
+- Fixed undefined array key warnings.
+- Fixed error with EXIF and IPTC fields not saving data.
+
 #####   Version 2.0.4 (2025-12-17)
 
 - Fixed issue with creating new Media Category from “Attachment details” modal

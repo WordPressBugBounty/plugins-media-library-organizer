@@ -59,6 +59,7 @@ if ( ! class_exists( 'Media_Library_Organizer_Output' ) ) {
 
 			// Defer loading of Plugin Classes.
 			add_action( 'init', array( $this, 'initialize' ), 2 );
+			add_action( 'init', array( $this, 'upgrade' ), 3 );
 		}
 
 		/**
@@ -81,6 +82,7 @@ if ( ! class_exists( 'Media_Library_Organizer_Output' ) ) {
 			$this->initialize_frontend();
 			$this->initialize_admin_or_frontend_editor();
 			$this->initialize_cli();
+			$this->initialize_global();
 		}
 
 		/**
@@ -148,6 +150,32 @@ if ( ! class_exists( 'Media_Library_Organizer_Output' ) ) {
 
 			$this->classes->media    = new Media_Library_Organizer_Output_Media( self::$instance );
 			$this->classes->settings = new Media_Library_Organizer_Output_Settings( self::$instance );
+		}
+
+		/**
+		 * Initialize classes used everywhere
+		 */
+		private function initialize_global() {
+			$this->classes->install = new Media_Library_Organizer_Output_Install( self::$instance );
+		}
+
+		/**
+		 * Runs the upgrade routine once the plugin has loaded.
+		 */
+		public function upgrade() {
+
+			// Bail if the main Plugin isn't active.
+			if ( ! function_exists( 'Media_Library_Organizer' ) ) {
+				return;
+			}
+
+			// Bail if we're not in the WordPress Admin.
+			if ( ! is_admin() ) {
+				return;
+			}
+
+			// Run upgrade routine.
+			$this->get_class( 'install' )->upgrade();
 		}
 
 		/**

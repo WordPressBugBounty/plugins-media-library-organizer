@@ -448,9 +448,9 @@ class Media_Library_Organizer_Common {
 			'parent'     => 0,
 		);
 
-		// If logged in as an Administrator, prevent PublishPress Permissions from attempting to filter Term counts,
-		// otherwise they will display as zero for Administrators (other User Roles are unaffected).
-		if ( is_user_logged_in() && 'administrator' === wp_get_current_user()->roles[0] ) {
+		// If logged in as an Administrator or Super Admin, prevent PublishPress Permissions from attempting to filter Term counts,
+		// otherwise they will display as zero for these users (other User Roles are unaffected).
+		if ( is_super_admin() || ( is_user_logged_in() && in_array( 'administrator', wp_get_current_user()->roles, true ) ) ) {
 			$args['pp_no_filter'] = true;
 		}
 

@@ -165,7 +165,7 @@ class Media_Library_Organizer_AJAX {
 
 		// Bail if no Taxonomy Name specified.
 		if ( ! $taxonomy_name ) {
-			return wp_send_json_error( __( 'The taxonomy_name or args[taxonomy_name] parameter must be included in the request.', 'media-library-organizer' ) );
+			return wp_send_json_error( __( 'A required field is missing. Please try again or contact support.', 'media-library-organizer' ) );
 		}
 
 		// Get results.

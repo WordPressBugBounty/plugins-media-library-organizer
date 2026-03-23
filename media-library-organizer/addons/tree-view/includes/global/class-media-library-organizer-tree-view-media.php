@@ -327,6 +327,7 @@ class Media_Library_Organizer_Tree_View_Media {
 		foreach ( $terms as $term ) {
 			$created_at                    = get_term_meta( $term->term_id, '_created_at', true );
 			$modified_at                   = get_term_meta( $term->term_id, '_modified_at', true );
+			$folder_order                  = get_term_meta( $term->term_id, '_folder_order', true );
 			$terms_by_id[ $term->term_id ] = array(
 				'id'          => $term->term_id,
 				'name'        => $term->name,
@@ -337,6 +338,7 @@ class Media_Library_Organizer_Tree_View_Media {
 				'created_at'  => $created_at,
 				'modified_at' => $modified_at,
 				'slug'        => $term->slug,
+				'order'       => $folder_order !== '' ? (int) $folder_order : 999999,
 			);
 		}
 
@@ -347,6 +349,26 @@ class Media_Library_Organizer_Tree_View_Media {
 				$folders[] = &$terms_by_id[ $term_id ];
 			}
 		}
+
+		// Sort children by order field.
+		foreach ( $terms_by_id as &$term_data ) {
+			if ( ! empty( $term_data['children'] ) ) {
+				usort(
+					$term_data['children'],
+					function ( $a, $b ) {
+						return $a['order'] - $b['order'];
+					}
+				);
+			}
+		}
+
+		// Sort root folders by order field.
+		usort(
+			$folders,
+			function ( $a, $b ) {
+				return $a['order'] - $b['order'];
+			}
+		);
 
 		// Update counts to include child term counts recursively.
 		$this->update_recursive_counts( $terms_by_id, $taxonomy->name );
@@ -511,9 +533,9 @@ class Media_Library_Organizer_Tree_View_Media {
 			'walker'     => $walker,
 		);
 
-		// If logged in as an Administrator, prevent PublishPress Permissions from attempting to filter Term counts,
-		// otherwise they will display as zero for Administrators (other User Roles are unaffected).
-		if ( is_user_logged_in() && 'administrator' === wp_get_current_user()->roles[0] ) {
+		// If logged in as an Administrator or Super Admin, prevent PublishPress Permissions from attempting to filter Term counts,
+		// otherwise they will display as zero for these users (other User Roles are unaffected).
+		if ( is_super_admin() || ( is_user_logged_in() && in_array( 'administrator', wp_get_current_user()->roles, true ) ) ) {
 			$args['pp_no_filter'] = true;
 		}
 

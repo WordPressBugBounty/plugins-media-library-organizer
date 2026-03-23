@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			echo esc_html(
 				sprintf(
 				/* translators: Plugin Name */
-					__( 'Filter by mutiple Categories and specific File Types with %s Pro', 'media-library-organizer' ),
+					__( 'Filter by multiple categories and specific file types with %s Pro', 'media-library-organizer' ),
 					$this->base->plugin->displayName
 				)
 			);

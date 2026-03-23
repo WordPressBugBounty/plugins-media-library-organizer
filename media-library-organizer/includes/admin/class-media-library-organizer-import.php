@@ -74,8 +74,8 @@ class Media_Library_Organizer_Import {
 		}
 
 		// FileBird.
-		$filebird_terms = $this->get_terms( 'nt_wmc_folder' );
-		if ( false !== $filebird_terms ) {
+		// FileBird v5+ stores folders in a custom `fbv` table; older versions used WP taxonomy `nt_wmc_folder`.
+		if ( $this->filebird_has_data() ) {
 			$import_sources['import_filebird'] = array(
 				'name'          => 'import_filebird',
 				'label'         => __( 'Import from FileBird', 'media-library-organizer' ),
@@ -87,7 +87,7 @@ class Media_Library_Organizer_Import {
 		// Folders.
 		$folders_terms = $this->get_terms( 'media_folder' );
 		if ( false !== $folders_terms ) {
-			$import_sources['v'] = array(
+			$import_sources['import_folders'] = array(
 				'name'          => 'import_folders',
 				'label'         => __( 'Import from Folders (Premio)', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-folders.php',
@@ -128,6 +128,38 @@ class Media_Library_Organizer_Import {
 			);
 		}
 
+		// Media Library Assistant (David Lingren) — taxonomy: attachment_category.
+		$mla_terms = $this->get_terms( 'attachment_category' );
+		if ( false !== $mla_terms ) {
+			$import_sources['import_mla'] = array(
+				'name'          => 'import_mla',
+				'label'         => __( 'Import from Media Library Assistant', 'media-library-organizer' ),
+				'view'          => $this->base->plugin->folder . 'views/admin/import-mla.php',
+				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-media-library-assistant/',
+			);
+		}
+
+		// Mediamatic (Plugincraft) — taxonomy: mediamatic_wpfolder.
+		$mediamatic_terms = $this->get_terms( 'mediamatic_wpfolder' );
+		if ( false !== $mediamatic_terms ) {
+			$import_sources['import_mediamatic'] = array(
+				'name'          => 'import_mediamatic',
+				'label'         => __( 'Import from Mediamatic', 'media-library-organizer' ),
+				'view'          => $this->base->plugin->folder . 'views/admin/import-mediamatic.php',
+				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-mediamatic/',
+			);
+		}
+
+		// WP Real Media Library (devowl.io) — stores folders in `wp_realmedialibrary` custom table.
+		if ( $this->rml_has_data() ) {
+			$import_sources['import_rml'] = array(
+				'name'          => 'import_rml',
+				'label'         => __( 'Import from WP Real Media Library', 'media-library-organizer' ),
+				'view'          => $this->base->plugin->folder . 'views/admin/import-rml.php',
+				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-real-media-library/',
+			);
+		}
+
 		// Return.
 		return $import_sources;
 	}
@@ -144,7 +176,7 @@ class Media_Library_Organizer_Import {
 
 		// Bail if no data.
 		if ( ! is_array( $import['data'] ) ) {
-			$this->error_message = __( 'Supplied file is not a valid JSON settings file, or has become corrupt.', 'media-library-organizer' ); // @phpstan-ignore-line.
+			$this->error_message = __( 'The uploaded file is not a valid settings file, or it may be damaged. Please export a new copy and try again.', 'media-library-organizer' ); // @phpstan-ignore-line.
 			return;
 		}
 
@@ -171,7 +203,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		if ( isset( $import['import_filebird'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'nt_wmc_folder' );
+			return $this->import_filebird();
 		}
 
 		if ( isset( $import['import_folders'] ) ) {
@@ -188,6 +220,21 @@ class Media_Library_Organizer_Import {
 
 		if ( isset( $import['import_wp_media_folder'] ) ) {
 			return $this->import_third_party_taxonomy_terms( 'wpmf-category' );
+		}
+
+		// Media Library Assistant (David Lingren).
+		if ( isset( $import['import_mla'] ) ) {
+			return $this->import_third_party_taxonomy_terms( 'attachment_category' );
+		}
+
+		// Mediamatic (Plugincraft).
+		if ( isset( $import['import_mediamatic'] ) ) {
+			return $this->import_third_party_taxonomy_terms( 'mediamatic_wpfolder' );
+		}
+
+		// WP Real Media Library (devowl.io).
+		if ( isset( $import['import_rml'] ) ) {
+			return $this->import_rml();
 		}
 	}
 
@@ -318,7 +365,7 @@ class Media_Library_Organizer_Import {
 			} else {
 				return new WP_Error(
 					'media_library_organizer_import_import_third_party_taxonomy_terms',
-					__( 'No Terms were imported', 'media-library-organizer' )
+					__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
 				);
 			}
 		}
@@ -375,6 +422,415 @@ class Media_Library_Organizer_Import {
 		}
 
 		// All OK, no errors.
+		return true;
+	}
+
+	/**
+	 * Checks whether FileBird has any folder data, supporting both
+	 * legacy (WP taxonomy: nt_wmc_folder) and v5+ (custom `fbv` table).
+	 *
+	 * @since   2.1.0
+	 *
+	 * @return  bool
+	 */
+	private function filebird_has_data() {
+
+		global $wpdb;
+
+		$table_fbv = $wpdb->prefix . 'fbv';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv ) ) ) === $table_fbv ) {
+			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_fbv} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( $count > 0 ) {
+				return true;
+			}
+		}
+
+		return false !== $this->get_terms( 'nt_wmc_folder' );
+	}
+
+	/**
+	 * Imports FileBird folders into Media Library Organizer.
+	 *
+	 * Dispatches to the v5+ custom-table importer if the `fbv` table exists,
+	 * otherwise falls back to the legacy WP taxonomy import.
+	 *
+	 * @since   2.1.0
+	 *
+	 * @return  WP_Error|bool
+	 */
+	private function import_filebird() {
+
+		global $wpdb;
+
+		$table_fbv = $wpdb->prefix . 'fbv';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv ) ) ) === $table_fbv ) {
+			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_fbv} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( $count > 0 ) {
+				return $this->import_filebird_v5();
+			}
+		}
+
+		return $this->import_third_party_taxonomy_terms( 'nt_wmc_folder' );
+	}
+
+	/**
+	 * Imports FileBird v5+ folders from the `fbv` and `fbv_attachment_folder` tables.
+	 *
+	 * Schema:
+	 *   fbv                 : id, name, parent (int, 0 = root), type (0 = regular folder), ord
+	 *   fbv_attachment_folder: folder_id, attachment_id
+	 *
+	 * @since   2.1.0
+	 *
+	 * @return  WP_Error|bool
+	 */
+	private function import_filebird_v5() {
+
+		global $wpdb;
+
+		$folders = $wpdb->get_results(
+			"SELECT id AS term_taxonomy_id, name, parent, '' AS description
+			 FROM {$wpdb->prefix}fbv
+			 WHERE type = 0
+			 ORDER BY parent ASC, ord ASC" // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		);
+
+		if ( empty( $folders ) ) {
+			return new WP_Error(
+				'media_library_organizer_import_filebird_v5',
+				__( 'No FileBird folders were found to import.', 'media-library-organizer' )
+			);
+		}
+
+		$terms = array();
+		foreach ( $folders as $folder ) {
+			$terms[ $folder->term_taxonomy_id ] = $folder;
+		}
+
+		$term_mappings = array();
+		$terms_errors  = array();
+
+		foreach ( $terms as $import_term_id => $import_term ) {
+			$terms_stack = array();
+			$has_parent  = true;
+
+			while ( $has_parent ) {
+				$terms_stack[ $import_term->term_taxonomy_id ] = $import_term;
+
+				if ( 0 === (int) $import_term->parent ) {
+					$has_parent = false;
+					break;
+				}
+
+				if ( ! isset( $terms[ $import_term->parent ] ) ) {
+					$has_parent = false;
+					break;
+				}
+
+				$import_term = $terms[ $import_term->parent ];
+			}
+
+			$terms_stack = array_reverse( $terms_stack );
+
+			foreach ( $terms_stack as $child_term ) {
+				if ( empty( $child_term->name ) ) {
+					continue;
+				}
+
+				if ( isset( $term_mappings[ $child_term->term_taxonomy_id ] ) ) {
+					continue;
+				}
+
+				$result = $this->create_term(
+					$child_term->name,
+					$child_term->description,
+					isset( $term_mappings[ $child_term->parent ] ) ? $term_mappings[ $child_term->parent ] : ''
+				);
+
+				if ( is_wp_error( $result ) ) {
+					$terms_errors[] = sprintf(
+						/* translators: %1$s: Term name to create, %2$s: Error message from attempting to create term */
+						__( 'Term Name: %1$s, Error: %2$s', 'media-library-organizer' ),
+						$child_term->name,
+						$result->get_error_message()
+					);
+					continue;
+				}
+
+				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
+			}
+		}
+
+		if ( empty( $term_mappings ) ) {
+			if ( count( $terms_errors ) ) {
+				return new WP_Error(
+					'media_library_organizer_import_filebird_v5',
+					sprintf(
+						/* translators: %s: List of errors */
+						__( 'No Terms were imported, as the following errors were encountered: %s', 'media-library-organizer' ),
+						'<br />' . implode( '<br />', $terms_errors )
+					)
+				);
+			}
+			return new WP_Error(
+				'media_library_organizer_import_filebird_v5',
+				__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
+			);
+		}
+
+		$folder_ids   = array_keys( $term_mappings );
+		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
+
+		// Check if the fbv_attachment_folder table exists before querying.
+		$table_fbv_attachment = $wpdb->prefix . 'fbv_attachment_folder';
+		$attachments          = array();
+
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv_attachment ) ) ) === $table_fbv_attachment ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT attachment_id, folder_id AS term_taxonomy_id
+					 FROM {$wpdb->prefix}fbv_attachment_folder
+					 WHERE folder_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+					$folder_ids
+				)
+			);
+
+			foreach ( (array) $rows as $row ) {
+				$attachments[ $row->attachment_id ][] = absint( $row->term_taxonomy_id );
+			}
+		}
+
+		foreach ( $attachments as $attachment_id => $old_term_ids ) {
+			$term_ids = array();
+			foreach ( $old_term_ids as $old_term_id ) {
+				if ( isset( $term_mappings[ $old_term_id ] ) ) {
+					$term_ids[] = absint( $term_mappings[ $old_term_id ] );
+				}
+			}
+
+			if ( empty( $term_ids ) ) {
+				continue;
+			}
+
+			$result = wp_set_object_terms( $attachment_id, $term_ids, 'mlo-category', false );
+
+			if ( is_wp_error( $result ) ) {
+				$terms_errors[] = sprintf(
+					/* translators: %1$s: Attachment ID, %2$s: Term IDs, %3$s: Error message */
+					__( 'Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s', 'media-library-organizer' ),
+					$attachment_id,
+					implode( ',', $term_ids ),
+					$result->get_error_message()
+				);
+			}
+		}
+
+		if ( count( $terms_errors ) ) {
+			return new WP_Error(
+				'media_library_organizer_import_filebird_v5',
+				sprintf(
+					/* translators: %s: List of errors */
+					__( 'Terms were imported, however some errors were encountered.  They may have no impact on the import, but you\'ll need to check: %s', 'media-library-organizer' ),
+					'<br />' . implode( '<br />', $terms_errors )
+				)
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks whether WP Real Media Library (devowl.io) has folder data.
+	 *
+	 * RML stores folders in the custom `wp_realmedialibrary` table.
+	 * Only type = 0 rows represent regular folders (not collections/galleries).
+	 *
+	 * @since   2.1.0
+	 *
+	 * @return  bool
+	 */
+	private function rml_has_data() {
+
+		global $wpdb;
+
+		$table_rml = $wpdb->prefix . 'realmedialibrary';
+
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_rml ) ) ) !== $table_rml ) {
+			return false;
+		}
+
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_rml} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return $count > 0;
+	}
+
+	/**
+	 * Imports WP Real Media Library (devowl.io) folders into Media Library Organizer.
+	 *
+	 * Schema:
+	 *   wp_realmedialibrary      : id, name, parent (int, -1 = root), type (0 = folder), ord
+	 *   wp_realmedialibrary_posts: fid (folder id), attachment (post ID)
+	 *
+	 * @since   2.1.0
+	 *
+	 * @return  WP_Error|bool
+	 */
+	private function import_rml() {
+
+		global $wpdb;
+
+		$table_rml       = $wpdb->prefix . 'realmedialibrary';
+		$table_rml_posts = $wpdb->prefix . 'realmedialibrary_posts';
+
+		// Fetch regular folders only (type = 0). Root parent is -1 in RML.
+		$folders = $wpdb->get_results(
+			"SELECT id AS term_taxonomy_id,
+			        name,
+			        parent,
+			        '' AS description
+			 FROM {$wpdb->prefix}realmedialibrary
+			 WHERE type = 0
+			 ORDER BY parent ASC, ord ASC" // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		);
+
+		if ( empty( $folders ) ) {
+			return new WP_Error(
+				'media_library_organizer_import_rml',
+				__( 'No WP Real Media Library folders were found to import.', 'media-library-organizer' )
+			);
+		}
+
+		$terms = array();
+		foreach ( $folders as $folder ) {
+			$terms[ $folder->term_taxonomy_id ] = $folder;
+		}
+
+		$term_mappings = array();
+		$terms_errors  = array();
+
+		foreach ( $terms as $import_term_id => $import_term ) {
+			$terms_stack = array();
+			$has_parent  = true;
+
+			while ( $has_parent ) {
+				$terms_stack[ $import_term->term_taxonomy_id ] = $import_term;
+
+				// RML uses -1 (or any value not in the table) as the virtual root.
+				if ( (int) $import_term->parent < 0 || ! isset( $terms[ $import_term->parent ] ) ) {
+					$has_parent = false;
+					break;
+				}
+
+				$import_term = $terms[ $import_term->parent ];
+			}
+
+			$terms_stack = array_reverse( $terms_stack );
+
+			foreach ( $terms_stack as $child_term ) {
+				if ( empty( $child_term->name ) ) {
+					continue;
+				}
+
+				if ( isset( $term_mappings[ $child_term->term_taxonomy_id ] ) ) {
+					continue;
+				}
+
+				// Only look up parent MLO ID when the parent is a real (non-root) folder.
+				$parent_mlo_id = '';
+				if ( (int) $child_term->parent >= 0 && isset( $term_mappings[ $child_term->parent ] ) ) {
+					$parent_mlo_id = $term_mappings[ $child_term->parent ];
+				}
+
+				$result = $this->create_term( $child_term->name, $child_term->description, $parent_mlo_id );
+
+				if ( is_wp_error( $result ) ) {
+					$terms_errors[] = sprintf(
+						/* translators: %1$s: Term name to create, %2$s: Error message from attempting to create term */
+						__( 'Term Name: %1$s, Error: %2$s', 'media-library-organizer' ),
+						$child_term->name,
+						$result->get_error_message()
+					);
+					continue;
+				}
+
+				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
+			}
+		}
+
+		if ( empty( $term_mappings ) ) {
+			if ( count( $terms_errors ) ) {
+				return new WP_Error(
+					'media_library_organizer_import_rml',
+					sprintf(
+						/* translators: %s: List of errors */
+						__( 'No Terms were imported, as the following errors were encountered: %s', 'media-library-organizer' ),
+						'<br />' . implode( '<br />', $terms_errors )
+					)
+				);
+			}
+			return new WP_Error(
+				'media_library_organizer_import_rml',
+				__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
+			);
+		}
+
+		// Fetch attachment relationships from RML's posts table.
+		$folder_ids   = array_keys( $term_mappings );
+		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
+		$attachments  = array();
+
+		// Check if the realmedialibrary_posts table exists before querying.
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_rml_posts ) ) ) === $table_rml_posts ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT attachment, fid AS term_taxonomy_id
+					 FROM {$wpdb->prefix}realmedialibrary_posts
+					 WHERE fid IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+					$folder_ids
+				)
+			);
+
+			foreach ( (array) $rows as $row ) {
+				$attachments[ $row->attachment ][] = absint( $row->term_taxonomy_id );
+			}
+		}
+
+		foreach ( $attachments as $attachment_id => $old_folder_ids ) {
+			$term_ids = array();
+			foreach ( $old_folder_ids as $old_folder_id ) {
+				if ( isset( $term_mappings[ $old_folder_id ] ) ) {
+					$term_ids[] = absint( $term_mappings[ $old_folder_id ] );
+				}
+			}
+
+			if ( empty( $term_ids ) ) {
+				continue;
+			}
+
+			$result = wp_set_object_terms( $attachment_id, $term_ids, 'mlo-category', false );
+
+			if ( is_wp_error( $result ) ) {
+				$terms_errors[] = sprintf(
+					/* translators: %1$s: Attachment ID, %2$s: Term IDs, %3$s: Error message */
+					__( 'Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s', 'media-library-organizer' ),
+					$attachment_id,
+					implode( ',', $term_ids ),
+					$result->get_error_message()
+				);
+			}
+		}
+
+		if ( count( $terms_errors ) ) {
+			return new WP_Error(
+				'media_library_organizer_import_rml',
+				sprintf(
+					/* translators: %s: List of errors */
+					__( 'Terms were imported, however some errors were encountered.  They may have no impact on the import, but you\'ll need to check: %s', 'media-library-organizer' ),
+					'<br />' . implode( '<br />', $terms_errors )
+				)
+			);
+		}
+
 		return true;
 	}
 

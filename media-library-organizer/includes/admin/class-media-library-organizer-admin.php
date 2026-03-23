@@ -61,6 +61,10 @@ class Media_Library_Organizer_Admin {
 
 		// Survey data.
 		add_filter( 'themeisle-sdk/survey/mlo', array( $this, 'get_survey_data' ), 10, 2 );
+
+		// Pro upsell notice on Media Library page (in_admin_header renders before .wrap).
+		add_action( 'in_admin_header', array( $this, 'maybe_output_pro_notice' ) );
+		add_action( 'wp_ajax_mlo_dismiss_pro_notice', array( $this, 'dismiss_pro_notice' ) );
 	}
 
 	/**
@@ -290,7 +294,7 @@ class Media_Library_Organizer_Admin {
 				'rest_nonce'           => wp_create_nonce( 'wp_rest' ),
 				'defaults'             => Media_Library_Organizer()->get_class( 'settings' )->get_settings( 'defaults' ),
 				'defaults_fields'      => apply_filters( 'media_library_organizer_defaults_fields', array() ),
-				'optimole_data'        => $this->get_optimole_data(),
+				'robin_data'           => $this->get_robin_data(),
 			)
 		);
 		wp_set_script_translations( $this->base->plugin->name . '-settings', 'media-library-organizer' );
@@ -315,49 +319,49 @@ class Media_Library_Organizer_Admin {
 	}
 
 	/**
-	 * Get optimole data.
+	 * Get Robin Image Optimizer data.
 	 *
 	 * @return array
 	 */
-	private function get_optimole_data() {
-		$data = get_transient( 'mlo_optimole_data' );
+	private function get_robin_data() {
+		$data = get_transient( 'mlo_robin_data' );
 
 		if ( empty( $data ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 
-			$data = plugins_api( 'plugin_information', array( 'slug' => 'optimole-wp' ) );
+			$data = plugins_api( 'plugin_information', array( 'slug' => 'robin-image-optimizer' ) );
 
 			if ( ! is_wp_error( $data ) ) {
-				set_transient( 'mlo_optimole_data', $data, 12 * HOUR_IN_SECONDS );
+				set_transient( 'mlo_robin_data', $data, 12 * HOUR_IN_SECONDS );
 			}
 		}
 
 		if ( ! is_object( $data ) ) {
-			$data->num_ratings     = 612;
 			$data                  = (object) array();
-			$data->rating          = 94;
-			$data->active_installs = 200000;
+			$data->rating          = 90;
+			$data->num_ratings     = 100;
+			$data->active_installs = 60000;
 		}
 
 		$rating          = (int) $data->rating * 5 / 100;
 		$rating          = number_format( $rating, 1 );
 		$active_installs = number_format( $data->active_installs );
 
-		$installed = file_exists( WP_PLUGIN_DIR . '/optimole-wp/optimole-wp.php' );
+		$installed = file_exists( WP_PLUGIN_DIR . '/robin-image-optimizer/robin-image-optimizer.php' );
 
 		return array(
 			'installed'      => $installed,
-			'active'         => is_plugin_active( 'optimole-wp/optimole-wp.php' ),
-			'logoURL'        => $this->base->plugin->url . 'assets/images/optimole-logo.png',
+			'active'         => is_plugin_active( 'robin-image-optimizer/robin-image-optimizer.php' ),
+			'logoURL'        => $this->base->plugin->url . 'assets/images/robin-logo.png',
 			// translators: %1$s: rating, %2$d: number of reviews.
 			'ratingByline'   => sprintf( __( '%1$s out of 5 stars (%2$d reviews)', 'media-library-organizer' ), $rating, $data->num_ratings ),
 			// translators: %s: number of active installations.
 			'activeInstalls' => sprintf( __( '%s+ Active installations', 'media-library-organizer' ), $active_installs ),
-			'cta'            => $installed ? __( 'Activate Optimole', 'media-library-organizer' ) : __( 'Install Optimole', 'media-library-organizer' ),
+			'cta'            => $installed ? __( 'Activate Robin Image Optimizer', 'media-library-organizer' ) : __( 'Install Robin Image Optimizer', 'media-library-organizer' ),
 			'thickboxURL'    => add_query_arg(
 				array(
 					'tab'       => 'plugin-information',
-					'plugin'    => 'optimole-wp',
+					'plugin'    => 'robin-image-optimizer',
 					'TB_iframe' => 'true',
 					'width'     => '600',
 					'height'    => '500',
@@ -847,5 +851,83 @@ class Media_Library_Organizer_Admin {
 			'userId'        => $user_id,
 			'attributes'    => $attributes,
 		);
+	}
+
+	/**
+	 * Outputs a Pro upsell admin notice on the Media Library page only.
+	 *
+	 * @since   2.0.5
+	 */
+	public function maybe_output_pro_notice() {
+
+		// Bail if Pro is active.
+		if ( function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid() ) {
+			return;
+		}
+
+		// Only show on the upload (Media Library) screen.
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return;
+		}
+		$screen = get_current_screen();
+		if ( ! $screen || 'upload' !== $screen->id ) {
+			return;
+		}
+
+		// Check if the user has dismissed this notice.
+		$dismissed = get_user_meta( get_current_user_id(), '_mlo_pro_notice_dismissed', true );
+		if ( $dismissed ) {
+			return;
+		}
+
+		$pricing_url  = 'https://wpmedialibrary.com/#pricing';
+		$features_url = 'https://wpmedialibrary.com/#features';
+		$nonce        = wp_create_nonce( 'mlo_dismiss_pro_notice' );
+
+		?>
+		<div class="mlo-pro-admin-notice notice" data-nonce="<?php echo esc_attr( $nonce ); ?>" style="margin:10px 20px 10px 2px;padding:10px 14px;background:#fff;border:1px solid #c3c4c7;border-left:4px solid #72aee6;display:flex;align-items:center;gap:12px;">
+			<div style="flex:1;">
+				<strong><?php esc_html_e( 'Media Library Organizer Pro', 'media-library-organizer' ); ?></strong>
+				<?php esc_html_e( 'Unlock advanced features like bulk operations, smart categorization, and enhanced folder management.', 'media-library-organizer' ); ?>
+			</div>
+			<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+				<a href="<?php echo esc_url( $pricing_url ); ?>" class="button button-primary" target="_blank" rel="noopener noreferrer">
+					<?php esc_html_e( 'Upgrade Now', 'media-library-organizer' ); ?>
+				</a>
+				<a href="<?php echo esc_url( $features_url ); ?>" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:#2271b1;">
+					<?php esc_html_e( 'Learn More', 'media-library-organizer' ); ?>
+				</a>
+			</div>
+			<button type="button" class="mlo-pro-dismiss" style="background:none;border:none;cursor:pointer;color:#787c82;padding:0;margin-left:4px;font-size:16px;" aria-label="Dismiss">&times;</button>
+		</div>
+		<script>
+		jQuery( function( $ ) {
+			$( document ).on( 'click', '.mlo-pro-dismiss', function() {
+				$( '.mlo-pro-admin-notice' ).fadeOut( 200 );
+				$.post( ajaxurl, {
+					action: 'mlo_dismiss_pro_notice',
+					_wpnonce: $( '.mlo-pro-admin-notice' ).data( 'nonce' )
+				});
+			});
+		});
+		</script>
+		<?php
+	}
+
+	/**
+	 * AJAX handler to permanently dismiss the Pro upsell notice.
+	 *
+	 * @since   2.0.5
+	 */
+	public function dismiss_pro_notice() {
+
+		check_ajax_referer( 'mlo_dismiss_pro_notice' );
+
+		if ( ! current_user_can( 'upload_files' ) ) {
+			wp_send_json_error( 'Unauthorized', 401 );
+		}
+
+		update_user_meta( get_current_user_id(), '_mlo_pro_notice_dismissed', 1 );
+		wp_send_json_success();
 	}
 }

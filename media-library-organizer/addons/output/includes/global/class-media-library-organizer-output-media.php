@@ -142,22 +142,22 @@ if ( ! class_exists( 'Media_Library_Organizer_Output_Media' ) ) {
 			$columns = array_merge(
 				$columns,
 				array(
-					'parent'         => __( 'Uploaded to', 'media-library-organizer' ),
-					'comments'       => __( 'Comments', 'media-library-organizer' ),
-					'date'           => __( 'Date', 'media-library-organizer' ),
-					'alt_text'       => __( 'Alt Text', 'media-library-organizer' ),
-					'caption'        => __( 'Caption', 'media-library-organizer' ),
-					'description'    => __( 'Description', 'media-library-organizer' ),
-					'slug'           => __( 'Slug', 'media-library-organizer' ),
-					'file_extension' => __( 'File Type', 'media-library-organizer' ),
-					'file_type'      => __( 'File Type', 'media-library-organizer' ),
-					'file_mime'      => __( 'File MIME', 'media-library-organizer' ),
-					'file_size'      => __( 'File Size', 'media-library-organizer' ),
-					'dimensions'     => __( 'Dimensions', 'media-library-organizer' ),
-					'width'          => __( 'Width', 'media-library-organizer' ),
-					'height'         => __( 'Height', 'media-library-organizer' ),
-					'attachment_id'  => __( 'Attachment ID', 'media-library-organizer' ),
-					'url'            => __( 'URL', 'media-library-organizer' ),
+					'parent'             => __( 'Uploaded to', 'media-library-organizer' ),
+					'comments'           => __( 'Comments', 'media-library-organizer' ),
+					'date'               => __( 'Date', 'media-library-organizer' ),
+					'mlo_alt_text'       => __( 'Alt Text', 'media-library-organizer' ),
+					'mlo_caption'        => __( 'Caption', 'media-library-organizer' ),
+					'mlo_description'    => __( 'Description', 'media-library-organizer' ),
+					'mlo_slug'           => __( 'Slug', 'media-library-organizer' ),
+					'mlo_file_extension' => __( 'File Extension', 'media-library-organizer' ),
+					'mlo_file_type'      => __( 'File Type', 'media-library-organizer' ),
+					'mlo_file_mime'      => __( 'File MIME', 'media-library-organizer' ),
+					'mlo_file_size'      => __( 'File Size', 'media-library-organizer' ),
+					'mlo_dimensions'     => __( 'Dimensions', 'media-library-organizer' ),
+					'mlo_width'          => __( 'Width', 'media-library-organizer' ),
+					'mlo_height'         => __( 'Height', 'media-library-organizer' ),
+					'mlo_attachment_id'  => __( 'Attachment ID', 'media-library-organizer' ),
+					'mlo_url'            => __( 'URL', 'media-library-organizer' ),
 				)
 			);
 
@@ -188,19 +188,6 @@ if ( ! class_exists( 'Media_Library_Organizer_Output_Media' ) ) {
 			// Get Settings.
 			$supported_list_view_columns = $this->get_supported_list_view_columns();
 			$enabled_list_view_columns   = Media_Library_Organizer()->get_class( 'settings' )->get_setting( 'output', 'list_view_columns' );
-
-			// Remove columns that aren't enabled.
-			foreach ( $columns as $column => $label ) {
-				// Always retain certain columns.
-				if ( $column === 'cb' || $column === 'title' ) {
-					continue;
-				}
-
-				// If this column isn't enabled, remove it now.
-				if ( ! in_array( $column, $enabled_list_view_columns, true ) ) {
-					unset( $columns[ $column ] );
-				}
-			}
 
 			// Add any other enabled columns.
 			foreach ( $supported_list_view_columns as $column => $label ) {
@@ -242,43 +229,43 @@ if ( ! class_exists( 'Media_Library_Organizer_Output_Media' ) ) {
 
 			switch ( $column_name ) {
 
-				case 'alt_text':
+				case 'mlo_alt_text':
 					return $attachment->get_alt_text();
 
-				case 'caption':
-					return $attachment->get_alt_text();
+				case 'mlo_caption':
+					return $attachment->get_caption();
 
-				case 'description':
+				case 'mlo_description':
 					return $attachment->get_description();
 
-				case 'slug':
+				case 'mlo_slug':
 					return get_permalink( $id );
 
-				case 'file_extension':
+				case 'mlo_file_extension':
 					return $path_parts['extension'];
 
-				case 'file_type':
+				case 'mlo_file_type':
 					return Media_Library_Organizer()->get_class( 'mime' )->get_file_type( $id );
 
-				case 'file_mime':
+				case 'mlo_file_mime':
 					return Media_Library_Organizer()->get_class( 'mime' )->get_file_type( $id ) . '/' . $path_parts['extension'];
 
-				case 'file_size':
+				case 'mlo_file_size':
 					return size_format( filesize( $file ) );
 
-				case 'dimensions':
+				case 'mlo_dimensions':
 					return $meta ? $meta['width'] . ' x ' . $meta['height'] . ' ' . __( 'pixels', 'media-library-organizer' ) : '';
 
-				case 'width':
+				case 'mlo_width':
 					return ( isset( $meta['width'] ) ? $meta['width'] . ' ' . __( 'pixels', 'media-library-organizer' ) : '' );
 
-				case 'height':
+				case 'mlo_height':
 					return ( isset( $meta['height'] ) ? $meta['height'] . ' ' . __( 'pixels', 'media-library-organizer' ) : '' );
 
-				case 'attachment_id':
+				case 'mlo_attachment_id':
 					return $id;
 
-				case 'url':
+				case 'mlo_url':
 					return wp_get_attachment_url( $id );
 
 				default:

@@ -63,7 +63,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 									if ( is_array( $import_sources ) && count( $import_sources ) > 0 ) {
 										foreach ( $import_sources as $import_source ) {
 											?>
-											<li class="wpzinc-nav-tab <?php echo esc_attr( $import_source['name'] ); ?>">
+											<li class="wpzinc-nav-tab download <?php echo esc_attr( $import_source['name'] ); ?>">
 												<a href="#<?php echo esc_attr( $import_source['name'] ); ?>">
 													<?php echo esc_html( $import_source['label'] ); ?>
 												</a>

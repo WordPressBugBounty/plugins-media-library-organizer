@@ -33,7 +33,7 @@ foreach ( $panels as $setting_name => $panel ) {
 							<?php esc_html_e( 'Upgrade', 'media-library-organizer' ); ?>
 						</a>
 					<?php else : ?>
-						<a target="_blank" href="<?php echo esc_url( admin_url( '/plugin-install.php?tab=plugin-information&plugin=optimole-wp&section=description' ) ); ?>" class="button button-primary" target="_blank">
+						<a target="_blank" href="<?php echo esc_url( admin_url( '/plugin-install.php?tab=plugin-information&plugin=robin-image-optimizer&section=description' ) ); ?>" class="button button-primary" target="_blank">
 							<?php esc_html_e( 'Install', 'media-library-organizer' ); ?>
 						</a>
 					<?php endif; ?>

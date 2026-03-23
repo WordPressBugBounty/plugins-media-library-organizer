@@ -198,6 +198,16 @@ function mediaLibraryOrganizerUploaderInitializeEvents() {
 
 	( function ( $, _ ) {
 
+		// Inject CSS to visually hide the upload overlay during folder drag.
+		// This runs unconditionally — it does not depend on wp.Uploader being present.
+		// The sidebar React component sets 'mlo-folder-dragging' on document.body
+		// during folder drag operations.
+		( function () {
+			var style = document.createElement( 'style' );
+			style.textContent = 'body.mlo-folder-dragging .uploader-window { display: none !important; }';
+			document.head.appendChild( style );
+		} )();
+
 		if ( typeof wp.Uploader !== 'undefined' ) {
 
 			_.extend(
@@ -226,6 +236,19 @@ function mediaLibraryOrganizerUploaderInitializeEvents() {
 					}
 				}
 			);
+
+			// Suppress the Backbone 'dragover' event on the uploader instance
+			// while a folder drag is in progress, so UploaderWindow.show() is not called.
+			// Placed after _.extend() so it cannot be silently overwritten.
+			if ( typeof wp.Uploader.prototype.dragover === 'function' ) {
+				var originalDragover = wp.Uploader.prototype.dragover;
+				wp.Uploader.prototype.dragover = function () {
+					if ( document.body.classList.contains( 'mlo-folder-dragging' ) ) {
+						return;
+					}
+					originalDragover.apply( this, arguments );
+				};
+			}
 
 		}
 

@@ -201,6 +201,64 @@ class Media_Library_Organizer_Rest {
 				},
 			)
 		);
+
+		register_rest_route(
+			$this->base->plugin->namespace,
+			'/move-folder',
+			array(
+				'methods'             => 'PUT',
+				'callback'            => array( $this, 'move_folder' ),
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				},
+				'args'                => array(
+					'id'     => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							return is_numeric( $value );
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'parent' => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							return is_numeric( $value );
+						},
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->base->plugin->namespace,
+			'/reorder-folders',
+			array(
+				'methods'             => 'PUT',
+				'callback'            => array( $this, 'reorder_folders' ),
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				},
+				'args'                => array(
+					'parent'     => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							return is_numeric( $value );
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'folder_ids' => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							return is_array( $value );
+						},
+						'sanitize_callback' => function ( $value ) {
+							return array_map( 'absint', $value );
+						},
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -228,7 +286,7 @@ class Media_Library_Organizer_Rest {
 		wp_send_json(
 			array(
 				'success' => true,
-				'message' => __( 'Taxonomy added successfully!', 'media-library-organizer' ),
+				'message' => __( 'Taxonomy added successfully.', 'media-library-organizer' ),
 				'data'    => array(
 					$taxonomy_name => $taxonomies[ $taxonomy_name ],
 				),
@@ -247,7 +305,7 @@ class Media_Library_Organizer_Rest {
 			wp_send_json_error(
 				array(
 					'success' => false,
-					'message' => __( 'This Media category cann\'t be deleted', 'media-library-organizer' ),
+					'message' => __( 'This media category can\'t be deleted.', 'media-library-organizer' ),
 				)
 			);
 		}
@@ -259,7 +317,7 @@ class Media_Library_Organizer_Rest {
 			wp_send_json_error(
 				array(
 					'success' => false,
-					'message' => __( 'Taxonomy is not existed!', 'media-library-organizer' ),
+					'message' => __( 'Taxonomy does not exist.', 'media-library-organizer' ),
 				)
 			);
 		}
@@ -336,7 +394,7 @@ class Media_Library_Organizer_Rest {
 			wp_send_json_error( $result->get_error_message() );
 		}
 
-		wp_send_json_success( __( 'Save columns list', 'media-library-organizer' ) );
+		wp_send_json_success( __( 'Save Columns', 'media-library-organizer' ) );
 	}
 
 	/**
@@ -370,7 +428,7 @@ class Media_Library_Organizer_Rest {
 			wp_send_json_error( __( 'Output setting is not saved!', 'media-library-organizer' ) );
 		}
 
-		wp_send_json_success( __( 'Setting saved!', 'media-library-organizer' ) );
+		wp_send_json_success( __( 'Settings saved.', 'media-library-organizer' ) );
 	}
 
 	/**
@@ -389,7 +447,7 @@ class Media_Library_Organizer_Rest {
 		);
 
 		if ( empty( $term_ids ) ) {
-			wp_send_json_error( __( 'Select at least one term!', 'media-library-organizer' ) );
+			wp_send_json_error( __( 'Please select at least one term.', 'media-library-organizer' ) );
 		}
 
 		foreach ( $term_ids as $_id ) {
@@ -399,7 +457,7 @@ class Media_Library_Organizer_Rest {
 
 			// Bail if the Term doesn't exist.
 			if ( ! $term ) {
-				wp_send_json_error( __( 'Term does not exist!', 'media-library-organizer' ) );
+				wp_send_json_error( __( 'The selected term no longer exists. It may have been deleted.', 'media-library-organizer' ) );
 			}
 
 			// Delete Term.
@@ -410,7 +468,7 @@ class Media_Library_Organizer_Rest {
 			}
 		}
 
-		wp_send_json_success( __( 'Term Deleted!', 'media-library-organizer' ) );
+		wp_send_json_success( __( 'Term deleted.', 'media-library-organizer' ) );
 	}
 
 	/**
@@ -432,7 +490,7 @@ class Media_Library_Organizer_Rest {
 		$term = get_term( $term_id );
 		wp_send_json_success(
 			array(
-				'message' => __( 'Term Created!', 'media-library-organizer' ),
+				'message' => __( 'Term created.', 'media-library-organizer' ),
 				'terms'   => array(
 					'id'     => $term_id,
 					'name'   => $term->name,
@@ -460,7 +518,7 @@ class Media_Library_Organizer_Rest {
 
 		// Bail if the (Old) Term doesn't exist.
 		if ( ! $old_term ) {
-			wp_send_json_error( __( 'Category does not exist, so cannot be deleted', 'media-library-organizer' ) );
+			wp_send_json_error( __( 'This category no longer exists. It may have already been deleted.', 'media-library-organizer' ) );
 		}
 
 		// Update Term.
@@ -469,7 +527,93 @@ class Media_Library_Organizer_Rest {
 			wp_send_json_error( $result->get_error_message() );
 		}
 
-		wp_send_json_success( __( 'Rename term!', 'media-library-organizer' ) );
+		wp_send_json_success( __( 'Term renamed.', 'media-library-organizer' ) );
+	}
+
+	/**
+	 * Move folder to new parent.
+	 *
+	 * @param WP_REST_Request $request Rest request object.
+	 */
+	public function move_folder( WP_REST_Request $request ) {
+		$term_id       = $request->get_param( 'id' );
+		$parent_id     = $request->get_param( 'parent' );
+		$taxonomy_name = apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' );
+
+		// Get the term.
+		$term = get_term_by( 'id', $term_id, $taxonomy_name );
+
+		// Bail if the Term doesn't exist.
+		if ( ! $term ) {
+			wp_send_json_error( __( 'The selected folder no longer exists. Please refresh and try again.', 'media-library-organizer' ) );
+		}
+
+		// Prevent moving a folder into itself.
+		if ( $parent_id === $term_id ) {
+			wp_send_json_error( __( 'Cannot move a folder into itself', 'media-library-organizer' ) );
+		}
+
+		// Verify parent exists if not root (0).
+		if ( $parent_id > 0 ) {
+			$parent_term = get_term_by( 'id', $parent_id, $taxonomy_name );
+			if ( ! $parent_term ) {
+				wp_send_json_error( __( 'Parent folder does not exist', 'media-library-organizer' ) );
+			}
+
+			// Prevent moving a folder into one of its descendants (circular hierarchy).
+			$ancestors = get_ancestors( $parent_id, $taxonomy_name, 'taxonomy' );
+			if ( in_array( $term_id, $ancestors, true ) ) {
+				wp_send_json_error( __( 'Cannot move a folder into its own subfolder', 'media-library-organizer' ) );
+			}
+		}
+
+		// Update the term's parent.
+		$result = wp_update_term(
+			$term_id,
+			$taxonomy_name,
+			array(
+				'parent' => $parent_id,
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		wp_send_json_success( __( 'Folder moved successfully.', 'media-library-organizer' ) );
+	}
+
+	/**
+	 * Reorder folders at the same level.
+	 *
+	 * @param WP_REST_Request $request Rest request object.
+	 */
+	public function reorder_folders( WP_REST_Request $request ) {
+		$parent_id     = $request->get_param( 'parent' );
+		$folder_ids    = $request->get_param( 'folder_ids' );
+		$taxonomy_name = apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' );
+
+		// Validate all folder IDs exist and have the same parent.
+		foreach ( $folder_ids as $folder_id ) {
+			$term = get_term_by( 'id', $folder_id, $taxonomy_name );
+			if ( ! $term ) {
+				wp_send_json_error( __( 'One or more folders do not exist', 'media-library-organizer' ) );
+			}
+
+			// Verify folder belongs to the specified parent.
+			if ( (int) $term->parent !== (int) $parent_id ) {
+				wp_send_json_error( __( 'All folders must have the same parent', 'media-library-organizer' ) );
+			}
+		}
+
+		// Update the order for each folder using term meta.
+		$position = 0;
+		foreach ( $folder_ids as $folder_id ) {
+			update_term_meta( $folder_id, '_folder_order', $position );
+			++$position;
+		}
+
+		wp_send_json_success( __( 'Folders reordered successfully.', 'media-library-organizer' ) );
 	}
 
 	/**
