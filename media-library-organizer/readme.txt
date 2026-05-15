@@ -1,10 +1,10 @@
-=== Media Library Organizer - WordPress Media Library Folders & File Manager ===
+=== Media Library Organizer – Folders, File Manager & Media Categories ===
 Contributors: themeisle
-Tags: media library folders, export media library, organize media library, media categories, folders
+Tags: media folders, file manager, media categories, organize files, taxonomy
 Requires at least: 5.0
 Tested up to: 6.9
 Requires PHP: 5.6
-Stable tag: 2.1.0
+Stable tag: 2.1.1
 License: GPLv2 or later
 
 Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
@@ -152,6 +152,13 @@ Please follow the reporting protocols outlined on our [Security Page](https://th
 4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.1.1 (2026-05-15)
+
+- Updated dependencies
+
+
+
 
 ####   Version 2.1.0 (2026-03-23)
 
