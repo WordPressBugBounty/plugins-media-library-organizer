@@ -330,7 +330,10 @@ class Media_Library_Organizer_Media {
 
 				// Labels.
 				'labels'                => array(
-					'unassigned' => __( '(Unassigned)', 'media-library-organizer' ),
+					'unassigned'         => __( '(Unassigned)', 'media-library-organizer' ),
+					'order_by'           => __( 'Sort by', 'media-library-organizer' ),
+					'order'              => __( 'Sort Order', 'media-library-organizer' ),
+					'filter_by_taxonomy' => $this->get_taxonomy_filter_labels(),
 				),
 			)
 		);
@@ -1366,5 +1369,24 @@ class Media_Library_Organizer_Media {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Returns an array of labels for the taxonomy filters, used in the Media Grid View.
+	 *
+	 * @return array Taxonomy Filter Labels, keyed by taxonomy name.
+	 */
+	private function get_taxonomy_filter_labels() {
+		$labels = array();
+
+		foreach ( $this->base->get_class( 'taxonomies' )->get_taxonomies() as $taxonomy_name => $taxonomy ) {
+			$labels[ $taxonomy_name ] = sprintf(
+				// translators: %s: Taxonomy Singular Name.
+				esc_html__( 'Filter by %s', 'media-library-organizer' ),
+				esc_html( $taxonomy['singular_name'] )
+			);
+		}
+
+		return $labels;
 	}
 }

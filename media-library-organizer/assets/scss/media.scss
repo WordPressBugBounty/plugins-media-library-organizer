@@ -166,6 +166,7 @@ table.media {
 .media-frame-content .attachments-browser .media-toolbar-secondary,
 .media-modal-content .attachments-browser .media-toolbar-secondary {
 	padding-bottom: 10px;
+	grid-template-columns: repeat( 4, 1fr ); /* fallback; overridden at runtime by mediaLibraryOrganizerApplyDynamicGridAreas() */
 }
 
 /**

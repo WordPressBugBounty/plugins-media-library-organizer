@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name: Media Library Organizer
  * Plugin URI: https://wpmedialibrary.com
- * Version: 2.1.1
+ * Version: 2.1.2
  * Author: Themeisle
  * License: GPLv2 or later
  * Author URI: https://themeisle.com
@@ -28,7 +28,7 @@ if ( class_exists( 'Media_Library_Organizer' ) ) {
 }
 
 // Define Plugin version and build date.
-define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.1' );
+define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.2' );
 define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_BUILD_DATE', '2022-11-15 18:00:00' );
 
 // Define Plugin paths.

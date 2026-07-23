@@ -860,6 +860,10 @@ class Media_Library_Organizer_Admin {
 	 */
 	public function maybe_output_pro_notice() {
 
+		if ( ! current_user_can( 'manage_categories' ) ) {
+			return;
+		}
+
 		// Bail if Pro is active.
 		if ( function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid() ) {
 			return;

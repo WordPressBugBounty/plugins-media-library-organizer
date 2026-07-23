@@ -89,7 +89,8 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'save_settings' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					$capability = apply_filters( 'media_library_organizer_admin_admin_menu_minimum_capability', 'manage_options' );
+					return current_user_can( $capability );
 				},
 			)
 		);
@@ -101,7 +102,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'save_columns' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 			)
 		);
@@ -113,7 +114,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'save_output_settings' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 			)
 		);
@@ -125,7 +126,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'DELETE',
 				'callback'            => array( $this, 'delete_folder' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 				'args'                => array(
 					'folders' => array(
@@ -148,7 +149,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'add_folder' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 				'args'                => array(
 					'folder_name' => array(
@@ -169,7 +170,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'PUT',
 				'callback'            => array( $this, 'rename_folder' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 				'args'                => array(
 					'id'   => array(
@@ -197,7 +198,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'download_folder' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 			)
 		);
@@ -209,7 +210,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'PUT',
 				'callback'            => array( $this, 'move_folder' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 				'args'                => array(
 					'id'     => array(
@@ -237,7 +238,7 @@ class Media_Library_Organizer_Rest {
 				'methods'             => 'PUT',
 				'callback'            => array( $this, 'reorder_folders' ),
 				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
+					return current_user_can( 'manage_categories' );
 				},
 				'args'                => array(
 					'parent'     => array(

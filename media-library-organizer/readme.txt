@@ -2,9 +2,9 @@
 Contributors: themeisle
 Tags: media folders, file manager, media categories, organize files, taxonomy
 Requires at least: 5.0
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 5.6
-Stable tag: 2.1.1
+Stable tag: 2.1.2
 License: GPLv2 or later
 
 Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
@@ -152,6 +152,15 @@ Please follow the reporting protocols outlined on our [Security Page](https://th
 4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.1.2 (2026-07-23)
+
+- Fixed the plugins filters not displaying correctly in the media modal on WordPress 7.0 and newer.
+- Fixed an issue where Editor users could not manage media folders because administrator-level permissions were required.
+- Updated dependencies
+
+
+
 
 #####   Version 2.1.1 (2026-05-15)
 

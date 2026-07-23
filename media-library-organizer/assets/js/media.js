@@ -592,7 +592,27 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 
 	( function () {
 
-		var AttachmentsBrowser           = wp.media.view.AttachmentsBrowser;
+		var AttachmentsBrowser = wp.media.view.AttachmentsBrowser;
+
+		// Use the core Label view when available; provide a minimal fallback for older WP versions
+		// where wp.media.view.Label is not yet defined, so the media modal doesn't throw at runtime.
+		var MLOLabelView = wp.media.view.Label || wp.media.View.extend(
+			{
+				tagName:   'label',
+				className: 'screen-reader-text',
+				initialize: function ( options ) {
+					this.value = options.value;
+				},
+				render: function () {
+					this.el.innerHTML = this.value;
+					if ( this.options.attributes ) {
+						this.$el.attr( this.options.attributes );
+					}
+					return this;
+				}
+			}
+		);
+
 		wp.media.view.AttachmentsBrowser = wp.media.view.AttachmentsBrowser.extend(
 			{
 					/**
@@ -619,6 +639,23 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 					// MediaLibraryOrganizerTaxonomyFilter is populated with Taxonomy Filters that are enabled in the Plugin Settings,
 					// so no need to check media_library_organizer_media.settings.
 					for ( let taxonomy_name in MediaLibraryOrganizerTaxonomyFilter ) {
+						let taxonomyLabelView = new MLOLabelView(
+							{
+								value:      media_library_organizer_media.labels.filter_by_taxonomy[ taxonomy_name ],
+								attributes: {
+									'for': 'media-attachment-taxonomy-filter-' + taxonomy_name
+								},
+								priority: priority
+							}
+						);
+						taxonomyLabelView.el.setAttribute( 'data-mlo-filter', 'label' );
+						this.toolbar.set(
+							'mediaLibraryOrganizerTaxonomyFilterLabel' + taxonomy_name,
+							taxonomyLabelView.render()
+						);
+
+						priority++;
+
 						this.toolbar.set(
 							taxonomy_name,
 							new MediaLibraryOrganizerTaxonomyFilter[ taxonomy_name ](
@@ -637,6 +674,23 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 
 						// Add the orderby filter to the toolbar.
 					if ( media_library_organizer_media.settings.orderby_enabled == 1 ) {
+						let orderByLabelView = new MLOLabelView(
+							{
+								value:      media_library_organizer_media.labels.order_by,
+								attributes: {
+									'for': 'media-attachment-orderby'
+								},
+								priority: priority
+							}
+						);
+						orderByLabelView.el.setAttribute( 'data-mlo-filter', 'label' );
+						this.toolbar.set(
+							'mediaLibraryOrganizerOrderByLabel',
+							orderByLabelView.render()
+						);
+
+						priority++;
+
 						this.toolbar.set(
 							'MediaLibraryOrganizerTaxonomyOrderBy',
 							new MediaLibraryOrganizerTaxonomyOrderBy(
@@ -655,6 +709,22 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 
 						// Add the order filter to the toolbar.
 					if ( media_library_organizer_media.settings.order_enabled == 1 ) {
+						let orderLabelView = new MLOLabelView(
+							{
+								value:      media_library_organizer_media.labels.order,
+								attributes: {
+									'for': 'media-attachment-order'
+								},
+								priority: priority
+							}
+						);
+						orderLabelView.el.setAttribute( 'data-mlo-filter', 'label' );
+						this.toolbar.set(
+							'mediaLibraryOrganizerOrderLabel',
+							orderLabelView.render()
+						);
+						priority++;
+
 						this.toolbar.set(
 							'MediaLibraryOrganizerTaxonomyOrder',
 							new MediaLibraryOrganizerTaxonomyOrder(
@@ -707,6 +777,15 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 							}
 						);
 
+						// Apply dynamic CSS Grid areas after the DOM renders.
+						var mloAttachmentsBrowser = this;
+						setTimeout(
+							function () {
+								mediaLibraryOrganizerApplyDynamicGridAreas( mloAttachmentsBrowser );
+							},
+							0
+						);
+
 						// Store the toolbar in a var so we can interact with it later.
 						MediaLibraryOrganizerAttachmentsBrowser = this;
 
@@ -747,6 +826,82 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 		);
 
 	} )( jQuery, _ );
+
+}
+
+/**
+ * Grid View: Apply dynamic CSS Grid areas to MLO filter labels and selects.
+ *
+ * Calculates and assigns inline grid-area styles for each MLO label/select pair
+ * based on the configured column count, so the layout automatically adapts to
+ * any number of registered filters without hardcoded grid-area values.
+ *
+ * Layout algorithm (C = column count, N = native WP filter columns):
+ *   - First row pair : MLO filters fill columns (N+1) through C
+ *   - Each subsequent row pair: fills columns 1 through C
+ *   - Labels occupy odd rows; selects occupy even rows
+ *
+ * @param 	{wp.media.view.AttachmentsBrowser} 	attachmentsBrowser 	The attachments browser view.
+ */
+function mediaLibraryOrganizerApplyDynamicGridAreas( attachmentsBrowser ) {
+
+	var columns          = parseInt( media_library_organizer_media.settings.columns, 10 ) || 4,
+		nativeFilterCols = parseInt( media_library_organizer_media.settings.native_filter_columns, 10 ),
+		secondaryToolbar,
+		mloLabels,
+		firstRowAvailable;
+
+	if ( isNaN( nativeFilterCols ) ) {
+		nativeFilterCols = 2;
+	}
+
+	if ( ! attachmentsBrowser || ! attachmentsBrowser.el ) {
+		return;
+	}
+
+	secondaryToolbar = attachmentsBrowser.el.querySelector( '.media-toolbar-secondary' );
+
+	if ( ! secondaryToolbar ) {
+		return;
+	}
+
+	secondaryToolbar.style.gridTemplateColumns = 'repeat(' + columns + ', 1fr)';
+
+	mloLabels = Array.from( secondaryToolbar.querySelectorAll( 'label[data-mlo-filter="label"]' ) );
+
+	firstRowAvailable = Math.max( 0, columns - nativeFilterCols );
+
+	mloLabels.forEach(
+		function ( labelEl, index ) {
+
+			var forAttr  = labelEl.getAttribute( 'for' ),
+				selectEl = forAttr ? secondaryToolbar.querySelector( '[id="' + forAttr + '"]' ) : null,
+				col,
+				rowPair,
+				labelRow,
+				selectRow,
+				remaining;
+
+			if ( index < firstRowAvailable ) {
+				col     = nativeFilterCols + 1 + index;
+				rowPair = 1;
+			} else {
+				remaining = index - firstRowAvailable;
+				col       = ( remaining % columns ) + 1;
+				rowPair   = Math.floor( remaining / columns ) + 2;
+			}
+
+			labelRow  = ( rowPair * 2 ) - 1;
+			selectRow = rowPair * 2;
+
+			labelEl.style.gridArea = labelRow + ' / ' + col + ' / ' + ( labelRow + 1 ) + ' / ' + ( col + 1 );
+
+			if ( selectEl ) {
+				selectEl.style.gridArea = selectRow + ' / ' + col + ' / ' + ( selectRow + 1 ) + ' / ' + ( col + 1 );
+			}
+
+		}
+	);
 
 }
 
@@ -958,6 +1113,16 @@ function mediaLibraryOrganizerGridViewReplaceTaxonomyFilter( taxonomy_name, term
 					priority: 	-75
 				}
 			).render()
+		);
+
+		// Re-apply dynamic grid areas because the select element was replaced.
+		setTimeout(
+			function () {
+				if ( MediaLibraryOrganizerAttachmentsBrowser ) {
+					mediaLibraryOrganizerApplyDynamicGridAreas( MediaLibraryOrganizerAttachmentsBrowser );
+				}
+			},
+			0
 		);
 
 	} )( jQuery );

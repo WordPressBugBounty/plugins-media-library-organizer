@@ -31,6 +31,10 @@ class Media_Library_Organizer_Tree_View_Media {
 	 */
 	public function __construct( $base ) {
 
+		if ( ! current_user_can( 'manage_categories' ) ) {
+			return;
+		}
+
 		// Store base class.
 		$this->base = $base;
 

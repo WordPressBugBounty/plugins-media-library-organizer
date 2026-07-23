@@ -1,3 +1,9 @@
+#####   Version 2.1.2 (2026-07-23)
+
+- Fixed the plugins filters not displaying correctly in the media modal on WordPress 7.0 and newer.
+- Fixed an issue where Editor users could not manage media folders because administrator-level permissions were required.
+- Updated dependencies
+
 #####   Version 2.1.1 (2026-05-15)
 
 - Updated dependencies
