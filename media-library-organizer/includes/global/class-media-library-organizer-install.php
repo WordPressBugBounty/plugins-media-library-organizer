@@ -84,5 +84,9 @@ class Media_Library_Organizer_Install {
 	 * @since   1.0.0
 	 */
 	public function uninstall() {
+
+		// Discard any queued Import, so that its background process doesn't stay scheduled
+		// once the Plugin is deactivated.
+		$this->base->get_class( 'import' )->reset();
 	}
 }

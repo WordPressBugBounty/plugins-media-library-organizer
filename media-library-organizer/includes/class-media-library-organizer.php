@@ -184,7 +184,6 @@ class Media_Library_Organizer {
 		$this->classes->admin      = new Media_Library_Organizer_Admin( self::$instance );
 		$this->classes->admin_ajax = new Media_Library_Organizer_Admin_AJAX( self::$instance );
 		$this->classes->export     = new Media_Library_Organizer_Export( self::$instance );
-		$this->classes->import     = new Media_Library_Organizer_Import( self::$instance );
 		$this->classes->edit       = new Media_Library_Organizer_Edit();
 	}
 
@@ -248,6 +247,7 @@ class Media_Library_Organizer {
 		$this->classes->common       = new Media_Library_Organizer_Common( self::$instance );
 		$this->classes->dynamic_tags = new Media_Library_Organizer_Dynamic_Tags( self::$instance );
 		$this->classes->filesystem   = new Media_Library_Organizer_Filesystem( self::$instance );
+		$this->classes->import       = new Media_Library_Organizer_Import( self::$instance );
 		$this->classes->install      = new Media_Library_Organizer_Install( self::$instance );
 		$this->classes->media        = new Media_Library_Organizer_Media( self::$instance );
 		$this->classes->mime         = new Media_Library_Organizer_MIME( self::$instance );

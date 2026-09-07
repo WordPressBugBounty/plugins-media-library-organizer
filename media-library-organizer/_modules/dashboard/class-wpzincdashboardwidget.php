@@ -799,6 +799,8 @@ class WPZincDashboardWidget {
 
 				if ( is_wp_error( $result ) ) {
 					$this->error_message = $result->get_error_message();
+				} elseif ( is_string( $result ) && ! empty( $result ) ) {
+					$this->message = $result;
 				} else {
 					$this->message = __( 'Settings imported.', 'media-library-organizer' );
 				}

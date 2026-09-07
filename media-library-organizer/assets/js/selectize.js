@@ -8,6 +8,31 @@
  */
 
 /**
+ * Filters the given elements to those that Selectize can initialize, and which aren't
+ * already initialized.
+ *
+ * @param 	object 	elements 	jQuery collection
+ * @return 	object 				jQuery collection
+ */
+function mediaLibraryOrganizerSelectizeElements( elements ) {
+
+	return elements.filter(
+		function() {
+
+			// Skip anything that isn't a form element, such as a Selectize wrapper.
+			if ( ! /^(select|input|textarea)$/i.test( this.tagName ) ) {
+				return false;
+			}
+
+			// Skip elements already initialized.
+			return ( typeof this.selectize === 'undefined' );
+
+		}
+	);
+
+}
+
+/**
  * Initializes selectize instances
  *
  * @since 	1.0.7
@@ -23,7 +48,7 @@ function mediaLibraryOrganizerSelectizeInit( container ) {
 		/**
 		 * Selectize Instances: Simple
 		 */
-		$( media_library_organizer_selectize.selectors.simple.join( ', ' ), $( media_library_organizer_selectize_container ) ).each(
+		mediaLibraryOrganizerSelectizeElements( $( media_library_organizer_selectize.selectors.simple.join( ', ' ), $( media_library_organizer_selectize_container ) ) ).each(
 			function() {
 
 				var delimiter = ',';
@@ -43,7 +68,7 @@ function mediaLibraryOrganizerSelectizeInit( container ) {
 		/**
 		 * Selectize Instances: Multiple Values
 		 */
-		$( media_library_organizer_selectize.selectors.multiple.join( ', ' ), $( media_library_organizer_selectize_container ) ).each(
+		mediaLibraryOrganizerSelectizeElements( $( media_library_organizer_selectize.selectors.multiple.join( ', ' ), $( media_library_organizer_selectize_container ) ) ).each(
 			function() {
 
 				var delimiter = ( typeof $( this ).data( 'delimiter' ) !== 'undefined' ? $( this ).data( 'delimiter' ) : ',' );
@@ -66,7 +91,7 @@ function mediaLibraryOrganizerSelectizeInit( container ) {
 		/**
 		 * Selectize Instances: WordPress AJAX Search
 		 */
-		$( media_library_organizer_selectize.selectors.ajax.join( ', ' ), $( media_library_organizer_selectize_container ) ).each(
+		mediaLibraryOrganizerSelectizeElements( $( media_library_organizer_selectize.selectors.ajax.join( ', ' ), $( media_library_organizer_selectize_container ) ) ).each(
 			function() {
 
 				var action    = $( this ).data( 'action' ),

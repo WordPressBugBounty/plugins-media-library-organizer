@@ -47,8 +47,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</p>
 		</div>
 
-		<div class="wpzinc-option">
-			<input name="import_mla" type="submit" class="button button-primary" value="<?php esc_attr_e( 'Import', 'media-library-organizer' ); ?>" />
-		</div>
+		<?php
+		require MEDIA_LIBRARY_ORGANIZER_PLUGIN_PATH . 'views/admin/import-progress.php';
+		?>
 	</div>
 </div>

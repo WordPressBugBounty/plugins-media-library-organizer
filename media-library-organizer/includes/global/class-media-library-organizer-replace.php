@@ -105,6 +105,24 @@ class Media_Library_Organizer_Replace {
 			return new WP_Error( 'file_error', __( 'Could not move file.', 'media-library-organizer' ) );
 		}
 
+		// Let plugins hooked to `wp_delete_file` (image optimizers, WebP converters) remove
+		// companion files of the old original after it has been overwritten in place.
+		apply_filters( 'wp_delete_file', $original_file );
+
+		// Also notify for the old scaled version, which the metadata generation
+		// below overwrites in place when the replacement is also scaled.
+		if ( $this->attachment->is_scaled() ) {
+			$scaled_original_file = str_replace(
+				$this->attachment->get_filename_with_ext(),
+				$this->attachment->get_filename_with_ext( true ),
+				$original_file
+			);
+
+			if ( file_exists( $scaled_original_file ) ) {
+				apply_filters( 'wp_delete_file', $scaled_original_file );
+			}
+		}
+
 		$wp_filesystem->chmod( $original_file, FS_CHMOD_FILE );
 
 		$this->remove_all_image_sizes();
@@ -141,11 +159,12 @@ class Media_Library_Organizer_Replace {
 	 */
 	private function remove_all_image_sizes() {
 		$all_image_sizes_paths = $this->attachment->get_all_image_sizes_paths();
-		global $wp_filesystem;
 
 		foreach ( $all_image_sizes_paths as $path ) {
 			if ( file_exists( $path ) ) {
-				$wp_filesystem->delete( $path );
+				// Use wp_delete_file() so plugins hooked to `wp_delete_file` (image optimizers,
+				// WebP converters) can clean up companion files, matching core deletion behavior.
+				wp_delete_file( $path );
 			}
 		}
 	}
@@ -156,8 +175,6 @@ class Media_Library_Organizer_Replace {
 	 * @return bool
 	 */
 	private function handle_scaled_images() {
-		global $wp_filesystem;
-
 		$old_scaled = $this->attachment->is_scaled();
 		$new_scaled = $this->new_attachment->is_scaled();
 		$replacer   = new Media_Library_Organizer_Renamer( true );
@@ -180,7 +197,7 @@ class Media_Library_Organizer_Replace {
 
 			$scaled_path = str_replace( $unscaled_file, $old_scaled_file, $this->attachment->get_source_file_path() );
 			if ( file_exists( $scaled_path ) ) {
-				$wp_filesystem->delete( $scaled_path );
+				wp_delete_file( $scaled_path );
 			}
 
 			update_attached_file( $this->attachment_id, sprintf( '%s/%s', $this->attachment->get_metadata_prefix_path(), $unscaled_file ) );

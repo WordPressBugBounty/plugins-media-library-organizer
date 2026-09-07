@@ -33,6 +33,14 @@ function getEntries() {
     entries[name] = path.resolve(__dirname, file);
   });
 
+  glob.sync("./_modules/**/scss/{admin,selectize}.scss").forEach((file) => {
+    const name = file
+      .replace("./_modules/", "_modules/")
+      .replace("/scss/", "/css/")
+      .replace(".scss", "");
+    entries[name] = path.resolve(__dirname, file);
+  });
+
   glob.sync("./_modules/dashboard/js/*.js").forEach((file) => {
     if (file.includes("-min.js")) return;
     const name = file

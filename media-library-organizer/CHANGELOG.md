@@ -1,3 +1,10 @@
+#####   Version 2.1.3 (2026-09-07)
+
+- Fixed third-party media-folder imports timing out or stopping partway through by processing large migrations in resumable background batches with progress reporting.
+- Fixed stale image copies after you replace media files.
+- Fixed blank Camera filters in the Media Library list view.
+- Fixed blank Media Categories filters in the Media Library list view.
+
 #####   Version 2.1.2 (2026-07-23)
 
 - Fixed the plugins filters not displaying correctly in the media modal on WordPress 7.0 and newer.

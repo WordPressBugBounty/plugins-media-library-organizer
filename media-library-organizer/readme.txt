@@ -2,9 +2,9 @@
 Contributors: themeisle
 Tags: media folders, file manager, media categories, organize files, taxonomy
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 License: GPLv2 or later
 
 Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
@@ -152,6 +152,16 @@ Please follow the reporting protocols outlined on our [Security Page](https://th
 4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.1.3 (2026-09-07)
+
+- Fixed third-party media-folder imports timing out or stopping partway through by processing large migrations in resumable background batches with progress reporting.
+- Fixed stale image copies after you replace media files.
+- Fixed blank Camera filters in the Media Library list view.
+- Fixed blank Media Categories filters in the Media Library list view.
+
+
+
 
 #####   Version 2.1.2 (2026-07-23)
 

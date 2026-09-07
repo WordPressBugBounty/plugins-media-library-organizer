@@ -15,6 +15,90 @@
 class Media_Library_Organizer_Import {
 
 	/**
+	 * The Cron hook that processes queued Import batches.
+	 *
+	 * @var     string
+	 */
+	const CRON_HOOK = 'media_library_organizer_process_import';
+
+	/**
+	 * Option storing the Import's progress.
+	 *
+	 * @var     string
+	 */
+	const STATE_OPTION = 'media-library-organizer-import';
+
+	/**
+	 * Option storing the Folder IDs to import, ordered parents first.
+	 *
+	 * @var     string
+	 */
+	const QUEUE_OPTION = 'media-library-organizer-import-queue';
+
+	/**
+	 * Option storing third party Folder ID to Media Library Organizer Term ID mappings.
+	 *
+	 * @var     string
+	 */
+	const MAPPINGS_OPTION = 'media-library-organizer-import-mappings';
+
+	/**
+	 * Option storing the timestamp of the request currently processing a batch.
+	 *
+	 * @var     string
+	 */
+	const LOCK_OPTION = 'media-library-organizer-import-lock';
+
+	/**
+	 * Folders are stored in the third party Plugin's own database tables.
+	 *
+	 * @var     string
+	 */
+	const STORAGE_TABLE = 'table';
+
+	/**
+	 * Folders are stored in a WordPress Taxonomy.
+	 *
+	 * @var     string
+	 */
+	const STORAGE_TAXONOMY = 'taxonomy';
+
+	/**
+	 * Number of Folders to import per batch.
+	 *
+	 * @var     int
+	 */
+	const FOLDER_BATCH_SIZE = 25;
+
+	/**
+	 * Number of Attachment to Folder relationships to read per batch.
+	 *
+	 * @var     int
+	 */
+	const ATTACHMENT_BATCH_SIZE = 50;
+
+	/**
+	 * Number of times a batch may be attempted before it's recorded as failed and skipped.
+	 *
+	 * @var     int
+	 */
+	const MAX_BATCH_ATTEMPTS = 3;
+
+	/**
+	 * Maximum number of errors to store, to prevent the progress Option growing unbounded.
+	 *
+	 * @var     int
+	 */
+	const MAX_ERRORS = 50;
+
+	/**
+	 * Number of seconds after which a lock held by a dead request is considered stale.
+	 *
+	 * @var     int
+	 */
+	const LOCK_TIMEOUT = 300;
+
+	/**
 	 * Holds the base class object.
 	 *
 	 * @since   1.0.0
@@ -24,9 +108,35 @@ class Media_Library_Organizer_Import {
 	public $base;
 
 	/**
-	 * Constructor
+	 * Holds the last error encountered when importing a settings file.
 	 *
-	 * @since   1.0.0
+	 * @var     string
+	 */
+	public $error_message;
+
+	/**
+	 * Whether this request is currently processing a batch.
+	 *
+	 * @var     bool
+	 */
+	private $processing = false;
+
+	/**
+	 * Whether this request's shutdown handler has been registered.
+	 *
+	 * @var     bool
+	 */
+	private $shutdown_registered = false;
+
+	/**
+	 * Holds the claim that this request has on the Import lock, if any.
+	 *
+	 * @var     string|null
+	 */
+	private $lock_claim = null;
+
+	/**
+	 * Holds the base class object.
 	 *
 	 * @param   object $base    Base Plugin Class.
 	 */
@@ -35,14 +145,26 @@ class Media_Library_Organizer_Import {
 		// Store base class.
 		$this->base = $base;
 
+		add_action( self::CRON_HOOK, array( $this, 'process_job' ) );
+
 		// Define Import Sources.
 		add_filter( 'media_library_organizer_import_sources', array( $this, 'import_sources' ) );
 
 		// Importers.
 		add_action( 'media_library_organizer_import', array( $this, 'import' ), 10, 2 );
 
-		// Enhanced Media Library.
+		// Third Party Importers.
 		add_filter( 'media_library_organizer_import_third_party', array( $this, 'import_third_party' ), 10, 2 );
+
+		// The remaining hooks are only used by the WordPress Administration interface.
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+		add_action( 'wp_ajax_media_library_organizer_import_start', array( $this, 'ajax_start' ) );
+		add_action( 'wp_ajax_media_library_organizer_import_status', array( $this, 'ajax_status' ) );
+		add_action( 'wp_ajax_media_library_organizer_import_cancel', array( $this, 'ajax_cancel' ) );
 	}
 
 	/**
@@ -60,6 +182,8 @@ class Media_Library_Organizer_Import {
 	public function import_sources( $import_sources ) {
 
 		// Enhanced Media Library.
+		// The Taxonomies to import are chosen by the user, so its availability depends on
+		// the Plugin having been installed, rather than on any Terms existing.
 		$eml = get_option( 'wpuxss_eml_version' );
 		if ( ! empty( $eml ) ) {
 			$import_sources['import_enhanced_media_library'] = array(
@@ -74,8 +198,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// FileBird.
-		// FileBird v5+ stores folders in a custom `fbv` table; older versions used WP taxonomy `nt_wmc_folder`.
-		if ( $this->filebird_has_data() ) {
+		if ( $this->source_has_data( 'import_filebird' ) ) {
 			$import_sources['import_filebird'] = array(
 				'name'          => 'import_filebird',
 				'label'         => __( 'Import from FileBird', 'media-library-organizer' ),
@@ -85,8 +208,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// Folders.
-		$folders_terms = $this->get_terms( 'media_folder' );
-		if ( false !== $folders_terms ) {
+		if ( $this->source_has_data( 'import_folders' ) ) {
 			$import_sources['import_folders'] = array(
 				'name'          => 'import_folders',
 				'label'         => __( 'Import from Folders (Premio)', 'media-library-organizer' ),
@@ -96,8 +218,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// HappyFiles.
-		$happyfiles_terms = $this->get_terms( 'happyfiles_category' );
-		if ( false !== $happyfiles_terms ) {
+		if ( $this->source_has_data( 'import_happyfiles' ) ) {
 			$import_sources['import_happyfiles'] = array(
 				'name'          => 'import_happyfiles',
 				'label'         => __( 'Import from HappyFiles', 'media-library-organizer' ),
@@ -107,8 +228,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// WP Media Folder.
-		$wp_media_folder_terms = $this->get_terms( 'wpmf-category' );
-		if ( false !== $wp_media_folder_terms ) {
+		if ( $this->source_has_data( 'import_wp_media_folder' ) ) {
 			$import_sources['import_wp_media_folder'] = array(
 				'name'          => 'import_wp_media_folder',
 				'label'         => __( 'Import from WP Media Folder', 'media-library-organizer' ),
@@ -118,8 +238,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// Wicked Folders.
-		$wicked_folders_terms = $this->get_terms( 'wf_attachment_folders' );
-		if ( false !== $wicked_folders_terms ) {
+		if ( $this->source_has_data( 'import_wicked_folders' ) ) {
 			$import_sources['import_wicked_folders'] = array(
 				'name'          => 'import_wicked_folders',
 				'label'         => __( 'Import from Wicked Folders', 'media-library-organizer' ),
@@ -129,8 +248,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// Media Library Assistant (David Lingren) — taxonomy: attachment_category.
-		$mla_terms = $this->get_terms( 'attachment_category' );
-		if ( false !== $mla_terms ) {
+		if ( $this->source_has_data( 'import_mla' ) ) {
 			$import_sources['import_mla'] = array(
 				'name'          => 'import_mla',
 				'label'         => __( 'Import from Media Library Assistant', 'media-library-organizer' ),
@@ -140,8 +258,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// Mediamatic (Plugincraft) — taxonomy: mediamatic_wpfolder.
-		$mediamatic_terms = $this->get_terms( 'mediamatic_wpfolder' );
-		if ( false !== $mediamatic_terms ) {
+		if ( $this->source_has_data( 'import_mediamatic' ) ) {
 			$import_sources['import_mediamatic'] = array(
 				'name'          => 'import_mediamatic',
 				'label'         => __( 'Import from Mediamatic', 'media-library-organizer' ),
@@ -151,7 +268,7 @@ class Media_Library_Organizer_Import {
 		}
 
 		// WP Real Media Library (devowl.io) — stores folders in `wp_realmedialibrary` custom table.
-		if ( $this->rml_has_data() ) {
+		if ( $this->source_has_data( 'import_rml' ) ) {
 			$import_sources['import_rml'] = array(
 				'name'          => 'import_rml',
 				'label'         => __( 'Import from WP Real Media Library', 'media-library-organizer' ),
@@ -176,7 +293,7 @@ class Media_Library_Organizer_Import {
 
 		// Bail if no data.
 		if ( ! is_array( $import['data'] ) ) {
-			$this->error_message = __( 'The uploaded file is not a valid settings file, or it may be damaged. Please export a new copy and try again.', 'media-library-organizer' ); // @phpstan-ignore-line.
+			$this->error_message = __( 'The uploaded file is not a valid settings file, or it may be damaged. Please export a new copy and try again.', 'media-library-organizer' );
 			return;
 		}
 
@@ -193,645 +310,1036 @@ class Media_Library_Organizer_Import {
 	 *
 	 * @param   mixed $success    WP_Error | bool.
 	 * @param   array $import     Import Parameters.
-	 * @return  mixed               WP_Error | bool
+	 * @return  mixed             WP_Error | string | bool
 	 */
-	public function import_third_party( $success, $import ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+	public function import_third_party( $success, $import ) {
 
-		// Check which importer we need to run.
-		if ( isset( $import['import_enhanced_media_library'] ) ) {
-			return $this->import_enhanced_media_library( $import );
-		}
+		$sources = $this->get_sources();
 
-		if ( isset( $import['import_filebird'] ) ) {
-			return $this->import_filebird();
-		}
-
-		if ( isset( $import['import_folders'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'media_folder' );
-		}
-
-		if ( isset( $import['import_happyfiles'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'happyfiles_category' );
-		}
-
-		if ( isset( $import['import_wicked_folders'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'wf_attachment_folders' );
-		}
-
-		if ( isset( $import['import_wp_media_folder'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'wpmf-category' );
-		}
-
-		// Media Library Assistant (David Lingren).
-		if ( isset( $import['import_mla'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'attachment_category' );
-		}
-
-		// Mediamatic (Plugincraft).
-		if ( isset( $import['import_mediamatic'] ) ) {
-			return $this->import_third_party_taxonomy_terms( 'mediamatic_wpfolder' );
-		}
-
-		// WP Real Media Library (devowl.io).
-		if ( isset( $import['import_rml'] ) ) {
-			return $this->import_rml();
-		}
-	}
-
-	/**
-	 * Import data from Enhanced Media Library
-	 *
-	 * @since   1.0.0
-	 *
-	 * @param   array $import     Import Parameters.
-	 * @return  mixed               WP_Error | bool
-	 */
-	public function import_enhanced_media_library( $import ) {
-
-		// Bail if no Taxonomies were selected.
-		if ( ! isset( $import['taxonomies'] ) || empty( $import['taxonomies'] ) ) {
-			return new WP_Error( 'media_library_organizer_import_enhanced_media_library', __( 'Import from Enhanced Media Library: Please select at least one Taxonomy to import.', 'media-library-organizer' ) );
-		}
-
-		/**
-		 * 1. General
-		 */
-		// N/A.
-
-		/**
-		 * 2. Taxonomy Terms
-		 */
-		foreach ( $import['taxonomies'] as $taxonomy ) {
-			$this->import_third_party_taxonomy_terms( $taxonomy );
-		}
-
-		// Done.
-		return true;
-	}
-
-	/**
-	 * Copies Taxonomy Terms from the third party Taxonomy into Media Library Organizer,
-	 * assigning them to Attachments they were previously assigned to.
-	 *
-	 * Doesn't need the third party Taxonmoy to be registered, and honors Term hierarchies.
-	 *
-	 * @since   1.1.2
-	 *
-	 * @param   string $taxonomy   Taxonomy.
-	 * @return  WP_Error|bool               Success
-	 */
-	private function import_third_party_taxonomy_terms( $taxonomy ) {
-
-		// Fetch Taxonomy Terms.
-		$terms = $this->get_terms( $taxonomy );
-
-		// Define an array to store old to new Term mappings.
-		$term_mappings = array();
-		$terms_errors  = array();
-
-		// If no Terms were found, skip.
-		if ( ! $terms ) {
-			return false;
-		}
-
-		// For each Term, add it to this Plugin's Taxonomy.
-		foreach ( $terms as $import_term_id => $import_term ) {
-
-			// For this Term, iterate through any parent term(s) that might exist
-			// until the Top Level Term is reached.  This builds an array
-			// of child --> child --> parent.
-			$terms_stack = array();
-			$has_parent  = true;
-			while ( $has_parent ) {
-				// Note that this is a Child Term.
-				$terms_stack[ $import_term->term_taxonomy_id ] = $import_term;
-
-				// If this Term does not have a Parent, exit the loop.
-				if ( 0 === $import_term->parent || '0' === $import_term->parent ) {
-					$has_parent = false;
-					break;
-				}
-
-				// If here, a Parent Term exists.
-				// Get Parent Term.
-				$import_term = $terms[ $import_term->parent ];
+		foreach ( $sources as $name => $source ) {
+			// Skip if this Import Source's button wasn't the one submitted.
+			if ( ! isset( $import[ $name ] ) ) {
+				continue;
 			}
 
-			// Reverse the array of stacked terms, so we're working from Parent --> Child --> Child etc.
-			$terms_stack = array_reverse( $terms_stack );
+			$args = array();
 
-			// We can now safely iterate through this collection of Terms, assigning each to its parent
-			// if a Parent exists.
-			// Because it's ordered Parent --> Child --> Child, no Child Term can be assigned to a Parent
-			// that does not exist.
-
-			// Iterate through the Terms Stack, creating them for this Plugin's Taxonomy.
-			foreach ( $terms_stack as $child_term ) {
-				// Skip if the Term Name is empty.
-				if ( empty( $child_term->name ) ) {
-					continue;
+			if ( ! empty( $source['choose_taxonomies'] ) ) {
+				if ( empty( $import['taxonomies'] ) ) {
+					return new WP_Error(
+						'media_library_organizer_import_taxonomies_required',
+						$source['label'] . ': ' . __( 'Please select at least one Taxonomy to import.', 'media-library-organizer' )
+					);
 				}
 
-				// Create Term.
-				$result = $this->create_term( $child_term->name, $child_term->description, ( isset( $term_mappings[ $child_term->parent ] ) ? $term_mappings[ $child_term->parent ] : '' ) );
+				$args['taxonomies'] = (array) $import['taxonomies'];
+			}
 
-				// Skip if an error occured.
-				if ( is_wp_error( $result ) ) {
-					$terms_errors[] = sprintf(
+			$state = $this->start( $name, $args );
+
+			if ( is_wp_error( $state ) ) {
+				return $state;
+			}
+
+			return __( 'The import has started, and will continue in the background until it completes.', 'media-library-organizer' );
+		}
+
+		return $success;
+	}
+
+	/**
+	 * Returns an array of Import Sources that this Plugin can import from.
+	 *
+	 * @return  array   Import Sources
+	 */
+	public function get_sources() {
+
+		global $wpdb;
+
+		$sources = array(
+			'import_enhanced_media_library' => array(
+				'label'             => __( 'Import from Enhanced Media Library', 'media-library-organizer' ),
+				// Chosen by the user on the Import screen, rather than fixed by this Source.
+				'taxonomies'        => array(),
+				'choose_taxonomies' => true,
+			),
+			'import_filebird'               => array(
+				'label'      => __( 'Import from FileBird', 'media-library-organizer' ),
+				// FileBird v5+ stores Folders in the `fbv` table; older versions used a Taxonomy.
+				'table'      => array(
+					'folders'          => $wpdb->prefix . 'fbv',
+					'folders_id'       => 'id',
+					'folders_name'     => 'name',
+					'folders_parent'   => 'parent',
+					'folders_where'    => 'type = 0',
+					'folders_orderby'  => 'parent ASC, ord ASC',
+					'relations'        => $wpdb->prefix . 'fbv_attachment_folder',
+					'relations_folder' => 'folder_id',
+					'relations_object' => 'attachment_id',
+				),
+				'taxonomies' => array( 'nt_wmc_folder' ),
+			),
+			'import_folders'                => array(
+				'label'      => __( 'Import from Folders (Premio)', 'media-library-organizer' ),
+				'taxonomies' => array( 'media_folder' ),
+			),
+			'import_happyfiles'             => array(
+				'label'      => __( 'Import from HappyFiles', 'media-library-organizer' ),
+				'taxonomies' => array( 'happyfiles_category' ),
+			),
+			'import_wicked_folders'         => array(
+				'label'      => __( 'Import from Wicked Folders', 'media-library-organizer' ),
+				'taxonomies' => array( 'wf_attachment_folders' ),
+			),
+			'import_wp_media_folder'        => array(
+				'label'      => __( 'Import from WP Media Folder', 'media-library-organizer' ),
+				'taxonomies' => array( 'wpmf-category' ),
+			),
+			'import_mla'                    => array(
+				'label'      => __( 'Import from Media Library Assistant', 'media-library-organizer' ),
+				'taxonomies' => array( 'attachment_category' ),
+			),
+			'import_mediamatic'             => array(
+				'label'      => __( 'Import from Mediamatic', 'media-library-organizer' ),
+				'taxonomies' => array( 'mediamatic_wpfolder' ),
+			),
+			'import_rml'                    => array(
+				'label' => __( 'Import from WP Real Media Library', 'media-library-organizer' ),
+				// Only type = 0 rows are regular Folders, rather than collections or galleries.
+				// The virtual root Folder is -1, rather than 0.
+				'table' => array(
+					'folders'          => $wpdb->prefix . 'realmedialibrary',
+					'folders_id'       => 'id',
+					'folders_name'     => 'name',
+					'folders_parent'   => 'parent',
+					'folders_where'    => 'type = 0',
+					'folders_orderby'  => 'parent ASC, ord ASC',
+					'relations'        => $wpdb->prefix . 'realmedialibrary_posts',
+					'relations_folder' => 'fid',
+					'relations_object' => 'attachment',
+				),
+			),
+		);
+
+		/**
+		 * Filters the Import Sources that this Plugin can import from.
+		 *
+		 * @param   array   $sources    Import Sources.
+		 * @return  array               Import Sources
+		 */
+		return apply_filters( 'media_library_organizer_import_background_sources', $sources );
+	}
+
+	/**
+	 * Whether the given Import Source has any Folders to import.
+	 *
+	 * @param   string $name   Import Source name.
+	 * @return  bool
+	 */
+	public function source_has_data( $name ) {
+
+		return ! is_wp_error( $this->resolve_source( $name ) );
+	}
+
+	/**
+	 * Returns the Import's progress, merged over its defaults.
+	 *
+	 * @return  array
+	 */
+	public function get_state() {
+
+		$state = get_option( self::STATE_OPTION, array() );
+
+		if ( ! is_array( $state ) ) {
+			$state = array();
+		}
+
+		return array_merge( $this->get_default_state(), $state );
+	}
+
+	/**
+	 * Queues an Import of the given Source, returning an error if one is already running.
+	 *
+	 * @param   string $name   Import Source name.
+	 * @param   array  $args   Optional Import arguments, such as the Taxonomies to import.
+	 * @return  WP_Error|array      WP_Error | Import progress
+	 */
+	public function start( $name, $args = array() ) {
+
+		if ( ! $this->acquire_lock() ) {
+			return new WP_Error(
+				'media_library_organizer_import_running',
+				__( 'An import is already running. Wait for it to finish, or cancel it, before starting another.', 'media-library-organizer' )
+			);
+		}
+
+		// Only ever allow one Import to run at a time, so that Folders and Attachment
+		// assignments can't be processed twice concurrently.
+		$state = $this->get_state();
+		if ( $this->is_running_state( $state ) ) {
+			$this->release_lock();
+
+			return new WP_Error(
+				'media_library_organizer_import_running',
+				__( 'An import is already running. Wait for it to finish, or cancel it, before starting another.', 'media-library-organizer' )
+			);
+		}
+
+		$source = $this->resolve_source( $name, $args );
+		if ( is_wp_error( $source ) ) {
+			$this->release_lock();
+
+			return $source;
+		}
+
+		$folders = $this->query_folders( $source );
+		if ( empty( $folders ) ) {
+			$this->release_lock();
+
+			return new WP_Error(
+				'media_library_organizer_import',
+				__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
+			);
+		}
+
+		// Order the Folders so that parents are always imported before their children. Each
+		// batch can then rely on its Folders' parents already having been mapped.
+		$queue = $this->order_folders_by_hierarchy( $folders );
+
+		update_option( self::QUEUE_OPTION, $queue, false );
+		update_option( self::MAPPINGS_OPTION, array(), false );
+
+		$state                      = $this->get_default_state();
+		$state['status']            = 'queued';
+		$state['stage']             = 'folders';
+		$state['source']            = $source['name'];
+		$state['label']             = $source['label'];
+		$state['storage']           = $source['storage'];
+		$state['table']             = $source['table'];
+		$state['taxonomies']        = $source['taxonomies'];
+		$state['started_at']        = time();
+		$state['folders_total']     = count( $queue );
+		$state['attachments_total'] = $this->count_attachments( $source, $queue );
+
+		$state = $this->save_state( $state );
+
+		// Queue the first request to process a batch. If it can't be queued, the Import will
+		// continue while this screen is open, and resume when it's reopened.
+		if ( ! $this->schedule_next() ) {
+			$this->reset();
+
+			return new WP_Error(
+				'media_library_organizer_import_not_scheduled',
+				__( 'The import could not be started, because a background task could not be scheduled on this site. Check whether WP-Cron is disabled, then try again.', 'media-library-organizer' )
+			);
+		}
+
+		$this->release_lock();
+
+		return $state;
+	}
+
+	/**
+	 * Stops a queued or running Import.
+	 *
+	 * @return  array   Import progress
+	 */
+	public function cancel() {
+
+		$state           = $this->get_state();
+		$state['status'] = 'cancelled';
+		$state           = $this->save_state( $state );
+
+		$this->unschedule();
+		return $state;
+	}
+
+	/**
+	 * Removes all Import progress and any queued Cron event.
+	 */
+	public function reset() {
+
+		delete_option( self::STATE_OPTION );
+		delete_option( self::QUEUE_OPTION );
+		delete_option( self::MAPPINGS_OPTION );
+		delete_option( self::LOCK_OPTION );
+		$this->lock_claim = null;
+
+		$this->unschedule();
+	}
+
+	/**
+	 * Processes a batch of Folders or Attachment assignments.
+	 *
+	 * @return  void
+	 */
+	public function process_job() {
+
+		$this->process();
+	}
+
+	/**
+	 * Processes a batch of Folders or Attachment assignments,
+	 * and queues the next request if there's still work to do.
+	 *
+	 * @return  array Import progress
+	 */
+	public function process() {
+
+		$state = $this->get_state();
+
+		// Bail if there's nothing to do.
+		if ( ! $this->is_running_state( $state ) ) {
+			return $state;
+		}
+
+		// Bail if another request is already processing a batch.
+		if ( ! $this->acquire_lock() ) {
+			return $state;
+		}
+
+		// Make sure that a fatal error leaves the Import in a resumable state.
+		$this->processing = true;
+
+		if ( ! $this->shutdown_registered ) {
+			register_shutdown_function( array( $this, 'shutdown' ) );
+			$this->shutdown_registered = true;
+		}
+
+		$state['status'] = 'processing';
+		$state           = $this->save_state( $state );
+
+		$state = $this->process_batch( $state );
+
+		$this->processing = false;
+
+		// Queue the next request if there's still work to do.
+		if ( 'processing' === $state['status'] ) {
+			$state['status'] = 'queued';
+
+			if ( ! $this->schedule_next() ) {
+				$state['errors'] = $this->add_error(
+					$state['errors'],
+					__( 'The import could not be started, because a background task could not be scheduled on this site. Check whether WP-Cron is disabled, then try again.', 'media-library-organizer' )
+				);
+			}
+
+			$state = $this->save_state( $state );
+		}
+
+		$this->release_lock();
+
+		return $state;
+	}
+
+	/**
+	 * Runs after a fatal error or timeout, leaving the Import in a resumable state so that
+	 * the next run picks up where this request stopped.
+	 */
+	public function shutdown() {
+
+		// Nothing to do if this request finished processing normally.
+		if ( ! $this->processing ) {
+			return;
+		}
+
+		$this->processing = false;
+
+		$state = $this->get_state();
+		$error = error_get_last();
+
+		if ( is_array( $error ) && in_array( $error['type'], array( E_ERROR, E_PARSE, E_COMPILE_ERROR, E_CORE_ERROR, E_USER_ERROR ), true ) ) {
+			$state['errors'] = $this->add_error(
+				$state['errors'],
+				sprintf(
+					/* translators: %s: PHP error message that interrupted the import */
+					__( 'The import was interrupted and will resume automatically: %s', 'media-library-organizer' ),
+					$error['message']
+				)
+			);
+		}
+
+		if ( $this->is_running_state( $state ) ) {
+			$state['status'] = 'queued';
+
+			if ( ! $this->schedule_next() ) {
+				$state['errors'] = $this->add_error(
+					$state['errors'],
+					__( 'The import could not be started, because a background task could not be scheduled on this site. Check whether WP-Cron is disabled, then try again.', 'media-library-organizer' )
+				);
+			}
+		}
+
+		$this->save_state( $state );
+		$this->release_lock();
+	}
+
+	/**
+	 * Processes a single batch of Folders or Attachment assignments.
+	 *
+	 * @param   array $state    Import progress.
+	 * @return  array               Import progress
+	 */
+	private function process_batch( $state ) {
+
+		$key      = $this->get_batch_key( $state );
+		$attempts = isset( $state['batch_attempts'][ $key ] ) ? (int) $state['batch_attempts'][ $key ] : 0;
+
+		// If a batch fails repeatedly, skip it and continue with the next batch.
+		if ( $attempts >= self::MAX_BATCH_ATTEMPTS ) {
+			return $this->skip_batch( $state, $key );
+		}
+
+		// Increment the number of attempts for this batch, so that if it fails again it can be skipped.
+		$state['batch_attempts'][ $key ] = $attempts + 1;
+		$state                           = $this->save_state( $state );
+
+		switch ( $state['stage'] ) {
+			case 'folders':
+				$state = $this->process_folders_batch( $state );
+				break;
+
+			case 'attachments':
+				$state = $this->process_attachments_batch( $state );
+				break;
+
+			default:
+				$state['status'] = 'complete';
+				break;
+		}
+
+		// The batch completed, so it no longer needs tracking.
+		unset( $state['batch_attempts'][ $key ] );
+
+		return $this->save_state( $state );
+	}
+
+	/**
+	 * Imports the next batch of Folders as Media Library Organizer Terms.
+	 *
+	 * @param   array $state    Import progress.
+	 * @return  array               Import progress
+	 */
+	private function process_folders_batch( $state ) {
+
+		$queue = $this->get_queue();
+		$total = count( $queue );
+
+		$folder_ids = array_slice( $queue, (int) $state['folder_cursor'], self::FOLDER_BATCH_SIZE );
+
+		// No Folders left; start assigning Attachments.
+		if ( empty( $folder_ids ) ) {
+			return $this->start_attachments_stage( $state );
+		}
+
+		$folders  = $this->query_folders( $state, $folder_ids );
+		$mappings = $this->get_mappings();
+		$cursor   = (int) $state['folder_cursor'];
+
+		foreach ( $folder_ids as $folder_id ) {
+			++$cursor;
+
+			if ( isset( $mappings[ $folder_id ] ) ) {
+				continue;
+			}
+
+			if ( ! isset( $folders[ $folder_id ] ) || empty( $folders[ $folder_id ]->name ) ) {
+				continue;
+			}
+
+			$folder = $folders[ $folder_id ];
+			$parent = (int) $folder->parent;
+
+			$result = $this->create_term(
+				$folder->name,
+				$folder->description,
+				( $parent > 0 && isset( $mappings[ $parent ] ) ? $mappings[ $parent ] : 0 )
+			);
+
+			if ( is_wp_error( $result ) ) {
+				$state['errors'] = $this->add_error(
+					$state['errors'],
+					sprintf(
 						/* translators: %1$s: Term name to create, %2$s: Error message from attempting to create term */
 						__( 'Term Name: %1$s, Error: %2$s', 'media-library-organizer' ),
-						$child_term->name,
+						$folder->name,
 						$result->get_error_message()
-					);
-					continue;
-				}
-
-				// Map this Term.
-				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
-			}
-		}
-
-		// If no Term Mappings exist, bail.
-		if ( empty( $term_mappings ) ) {
-			if ( count( $terms_errors ) ) {
-				return new WP_Error(
-					'media_library_organizer_import_import_third_party_taxonomy_terms',
-					sprintf(
-						/* translators: Errors when trying to import Terms from another Plugin */
-						__( 'No Terms were imported, as the following errors were encountered: %s', 'media-library-organizer' ),
-						'<br />' . implode( '<br />', $terms_errors )
 					)
 				);
-			} else {
-				return new WP_Error(
-					'media_library_organizer_import_import_third_party_taxonomy_terms',
-					__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
-				);
+				continue;
 			}
+
+			$mappings[ $folder_id ] = (int) $result;
 		}
 
-		// Get Term Relationships with Attachments.
-		$attachments = $this->get_term_relationships( array_keys( $term_mappings ) );
+		$this->save_mappings( $mappings );
 
-		// Iterate through Attachments, creating new Term Relationships.
-		if ( is_array( $attachments ) && count( $attachments ) > 0 ) {
-			foreach ( $attachments as $attachment_id => $old_term_ids ) {
-				// Build an array of the new Plugin Taxonomy Term IDs for this Attachment.
-				$term_ids = array();
-				foreach ( $old_term_ids as $old_term_id ) {
-					// Skip if, for some reason, the old Term doesn't have a new Plugin Taxonomy Term ID.
-					if ( ! isset( $term_mappings[ $old_term_id ] ) ) {
-						continue;
-					}
+		$state['folder_cursor'] = $cursor;
 
-					// Add the new Plugin Taxonomy Term ID to the Attachment.
-					$term_ids[] = absint( $term_mappings[ $old_term_id ] );
+		if ( $cursor >= $total ) {
+			$state = $this->start_attachments_stage( $state );
+		}
+
+		return $state;
+	}
+
+	/**
+	 * Imports the next batch of Attachment to Folder relationships.
+	 *
+	 * @param   array $state Import progress.
+	 * @return  array        Import progress
+	 */
+	private function process_attachments_batch( $state ) {
+
+		$rows = $this->get_attachment_rows( $state );
+
+		// No relationships left to process, so the Import is finished.
+		if ( empty( $rows ) ) {
+			$state['stage']  = 'done';
+			$state['status'] = 'complete';
+			return $state;
+		}
+
+		$mappings = $this->get_mappings();
+
+		$attachments = array();
+		foreach ( $rows as $row ) {
+			$attachments[ (int) $row->attachment_id ][] = (int) $row->folder_id;
+		}
+
+		$existing = $this->get_existing_attachment_ids( array_keys( $attachments ) );
+
+		foreach ( $attachments as $attachment_id => $folder_ids ) {
+			$state['attachment_cursor'] = $attachment_id;
+			++$state['attachments_processed'];
+
+			if ( ! isset( $existing[ $attachment_id ] ) ) {
+				++$state['attachments_missing'];
+				continue;
+			}
+
+			$term_ids = array();
+			foreach ( $folder_ids as $folder_id ) {
+				if ( isset( $mappings[ $folder_id ] ) ) {
+					$term_ids[] = absint( $mappings[ $folder_id ] );
 				}
+			}
 
-				// If no Plugin Taxonomy Term IDs were mapped, skip.
-				if ( count( $term_ids ) === 0 ) {
-					continue;
-				}
+			if ( empty( $term_ids ) ) {
+				continue;
+			}
 
-				// Assign the Plugin Taxonomy Term IDs to the Attachment.
-				$result = wp_set_object_terms( $attachment_id, $term_ids, 'mlo-category', false );
+			$result = wp_set_object_terms( $attachment_id, array_values( array_unique( $term_ids ) ), 'mlo-category', false );
 
-				// Store error if something went wrong.
-				if ( is_wp_error( $result ) ) {
-					$terms_errors[] = sprintf(
+			if ( is_wp_error( $result ) ) {
+				$state['errors'] = $this->add_error(
+					$state['errors'],
+					sprintf(
 						/* translators: %1$s: Attachment ID, %2$s: Term IDs to assign to Attachment ID, %3$s: Error message when trying to assign Terms to Attachment */
 						__( 'Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s', 'media-library-organizer' ),
 						$attachment_id,
 						implode( ',', $term_ids ),
 						$result->get_error_message()
-					);
-				}
-			}
-		}
-
-		// Return WP_Error if error(s) were detected during the import process.
-		if ( count( $terms_errors ) ) {
-			return new WP_Error(
-				'media_library_organizer_import_import_third_party_taxonomy_terms',
-				sprintf(
-					/* translators: Errors encountered when trying to import and assign Terms to Attachments */
-					__( 'Terms were imported, however some errors were encountered.  They may have no impact on the import, but you\'ll need to check: %s', 'media-library-organizer' ),
-					'<br />' . implode( '<br />', $terms_errors )
-				)
-			);
-		}
-
-		// All OK, no errors.
-		return true;
-	}
-
-	/**
-	 * Checks whether FileBird has any folder data, supporting both
-	 * legacy (WP taxonomy: nt_wmc_folder) and v5+ (custom `fbv` table).
-	 *
-	 * @since   2.1.0
-	 *
-	 * @return  bool
-	 */
-	private function filebird_has_data() {
-
-		global $wpdb;
-
-		$table_fbv = $wpdb->prefix . 'fbv';
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv ) ) ) === $table_fbv ) {
-			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_fbv} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $count > 0 ) {
-				return true;
-			}
-		}
-
-		return false !== $this->get_terms( 'nt_wmc_folder' );
-	}
-
-	/**
-	 * Imports FileBird folders into Media Library Organizer.
-	 *
-	 * Dispatches to the v5+ custom-table importer if the `fbv` table exists,
-	 * otherwise falls back to the legacy WP taxonomy import.
-	 *
-	 * @since   2.1.0
-	 *
-	 * @return  WP_Error|bool
-	 */
-	private function import_filebird() {
-
-		global $wpdb;
-
-		$table_fbv = $wpdb->prefix . 'fbv';
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv ) ) ) === $table_fbv ) {
-			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_fbv} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $count > 0 ) {
-				return $this->import_filebird_v5();
-			}
-		}
-
-		return $this->import_third_party_taxonomy_terms( 'nt_wmc_folder' );
-	}
-
-	/**
-	 * Imports FileBird v5+ folders from the `fbv` and `fbv_attachment_folder` tables.
-	 *
-	 * Schema:
-	 *   fbv                 : id, name, parent (int, 0 = root), type (0 = regular folder), ord
-	 *   fbv_attachment_folder: folder_id, attachment_id
-	 *
-	 * @since   2.1.0
-	 *
-	 * @return  WP_Error|bool
-	 */
-	private function import_filebird_v5() {
-
-		global $wpdb;
-
-		$folders = $wpdb->get_results(
-			"SELECT id AS term_taxonomy_id, name, parent, '' AS description
-			 FROM {$wpdb->prefix}fbv
-			 WHERE type = 0
-			 ORDER BY parent ASC, ord ASC" // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		);
-
-		if ( empty( $folders ) ) {
-			return new WP_Error(
-				'media_library_organizer_import_filebird_v5',
-				__( 'No FileBird folders were found to import.', 'media-library-organizer' )
-			);
-		}
-
-		$terms = array();
-		foreach ( $folders as $folder ) {
-			$terms[ $folder->term_taxonomy_id ] = $folder;
-		}
-
-		$term_mappings = array();
-		$terms_errors  = array();
-
-		foreach ( $terms as $import_term_id => $import_term ) {
-			$terms_stack = array();
-			$has_parent  = true;
-
-			while ( $has_parent ) {
-				$terms_stack[ $import_term->term_taxonomy_id ] = $import_term;
-
-				if ( 0 === (int) $import_term->parent ) {
-					$has_parent = false;
-					break;
-				}
-
-				if ( ! isset( $terms[ $import_term->parent ] ) ) {
-					$has_parent = false;
-					break;
-				}
-
-				$import_term = $terms[ $import_term->parent ];
-			}
-
-			$terms_stack = array_reverse( $terms_stack );
-
-			foreach ( $terms_stack as $child_term ) {
-				if ( empty( $child_term->name ) ) {
-					continue;
-				}
-
-				if ( isset( $term_mappings[ $child_term->term_taxonomy_id ] ) ) {
-					continue;
-				}
-
-				$result = $this->create_term(
-					$child_term->name,
-					$child_term->description,
-					isset( $term_mappings[ $child_term->parent ] ) ? $term_mappings[ $child_term->parent ] : ''
-				);
-
-				if ( is_wp_error( $result ) ) {
-					$terms_errors[] = sprintf(
-						/* translators: %1$s: Term name to create, %2$s: Error message from attempting to create term */
-						__( 'Term Name: %1$s, Error: %2$s', 'media-library-organizer' ),
-						$child_term->name,
-						$result->get_error_message()
-					);
-					continue;
-				}
-
-				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
-			}
-		}
-
-		if ( empty( $term_mappings ) ) {
-			if ( count( $terms_errors ) ) {
-				return new WP_Error(
-					'media_library_organizer_import_filebird_v5',
-					sprintf(
-						/* translators: %s: List of errors */
-						__( 'No Terms were imported, as the following errors were encountered: %s', 'media-library-organizer' ),
-						'<br />' . implode( '<br />', $terms_errors )
 					)
 				);
 			}
-			return new WP_Error(
-				'media_library_organizer_import_filebird_v5',
-				__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
-			);
 		}
 
-		$folder_ids   = array_keys( $term_mappings );
-		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
-
-		// Check if the fbv_attachment_folder table exists before querying.
-		$table_fbv_attachment = $wpdb->prefix . 'fbv_attachment_folder';
-		$attachments          = array();
-
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_fbv_attachment ) ) ) === $table_fbv_attachment ) {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT attachment_id, folder_id AS term_taxonomy_id
-					 FROM {$wpdb->prefix}fbv_attachment_folder
-					 WHERE folder_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-					$folder_ids
-				)
-			);
-
-			foreach ( (array) $rows as $row ) {
-				$attachments[ $row->attachment_id ][] = absint( $row->term_taxonomy_id );
-			}
-		}
-
-		foreach ( $attachments as $attachment_id => $old_term_ids ) {
-			$term_ids = array();
-			foreach ( $old_term_ids as $old_term_id ) {
-				if ( isset( $term_mappings[ $old_term_id ] ) ) {
-					$term_ids[] = absint( $term_mappings[ $old_term_id ] );
-				}
-			}
-
-			if ( empty( $term_ids ) ) {
-				continue;
-			}
-
-			$result = wp_set_object_terms( $attachment_id, $term_ids, 'mlo-category', false );
-
-			if ( is_wp_error( $result ) ) {
-				$terms_errors[] = sprintf(
-					/* translators: %1$s: Attachment ID, %2$s: Term IDs, %3$s: Error message */
-					__( 'Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s', 'media-library-organizer' ),
-					$attachment_id,
-					implode( ',', $term_ids ),
-					$result->get_error_message()
-				);
-			}
-		}
-
-		if ( count( $terms_errors ) ) {
-			return new WP_Error(
-				'media_library_organizer_import_filebird_v5',
-				sprintf(
-					/* translators: %s: List of errors */
-					__( 'Terms were imported, however some errors were encountered.  They may have no impact on the import, but you\'ll need to check: %s', 'media-library-organizer' ),
-					'<br />' . implode( '<br />', $terms_errors )
-				)
-			);
-		}
-
-		return true;
+		return $state;
 	}
 
 	/**
-	 * Checks whether WP Real Media Library (devowl.io) has folder data.
+	 * Skips the current batch of Folders or Attachment to Folder relationships, and continues with the next batch.
 	 *
-	 * RML stores folders in the custom `wp_realmedialibrary` table.
-	 * Only type = 0 rows represent regular folders (not collections/galleries).
-	 *
-	 * @since   2.1.0
-	 *
-	 * @return  bool
+	 * @param   array  $state   Import progress.
+	 * @param   string $key     Batch key.
+	 * @return  array               Import progress
 	 */
-	private function rml_has_data() {
+	private function skip_batch( $state, $key ) {
+
+		if ( 'folders' === $state['stage'] ) {
+			$total = count( $this->get_queue() );
+			$from  = (int) $state['folder_cursor'];
+			$to    = min( $from + self::FOLDER_BATCH_SIZE, $total );
+
+			$state['failed_batches'][] = sprintf(
+				/* translators: %1$s: Number of the first folder in the batch, %2$s: Number of the last folder in the batch */
+				__( 'Folders %1$s to %2$s could not be imported, and were skipped.', 'media-library-organizer' ),
+				number_format_i18n( $from + 1 ),
+				number_format_i18n( $to )
+			);
+
+			$state['folder_cursor'] = $to;
+
+			if ( $to >= $total ) {
+				$state = $this->start_attachments_stage( $state );
+			}
+		} else {
+			$rows = $this->get_attachment_rows( $state );
+
+			if ( empty( $rows ) ) {
+				$state['stage']  = 'done';
+				$state['status'] = 'complete';
+			} else {
+				$attachment_ids = array();
+				foreach ( $rows as $row ) {
+					$attachment_ids[ (int) $row->attachment_id ] = true;
+				}
+				$attachment_ids = array_keys( $attachment_ids );
+
+				$state['failed_batches'][] = sprintf(
+					/* translators: %s: Comma separated list of Attachment IDs */
+					__( 'The following attachments could not be assigned to folders, and were skipped: %s', 'media-library-organizer' ),
+					implode( ', ', $attachment_ids )
+				);
+
+				$state['attachments_processed'] += count( $attachment_ids );
+				$state['attachment_cursor']      = max( $attachment_ids );
+			}
+		}
+
+		unset( $state['batch_attempts'][ $key ] );
+
+		return $this->save_state( $state );
+	}
+
+	/**
+	 * Starts the Attachment assignment stage of the Import.
+	 *
+	 * @param   array $state    Import progress.
+	 * @return  array               Import progress
+	 */
+	private function start_attachments_stage( $state ) {
+
+		$state['stage']             = 'attachments';
+		$state['attachment_cursor'] = 0;
+
+		return $state;
+	}
+
+	/**
+	 * Returns the next batch of Attachment to Folder relationships to import, based on the current cursor.
+	 *
+	 * @param   array $state    Import progress.
+	 * @return  array               Rows of attachment_id and folder_id
+	 */
+	private function get_attachment_rows( $state ) {
+
+		$rows = $this->query_attachment_rows(
+			$state,
+			array(
+				'after' => (int) $state['attachment_cursor'],
+				'limit' => self::ATTACHMENT_BATCH_SIZE,
+			)
+		);
+
+		if ( count( $rows ) < self::ATTACHMENT_BATCH_SIZE ) {
+			return $rows;
+		}
+
+		$last_attachment_id = (int) $rows[ count( $rows ) - 1 ]->attachment_id;
+
+		$trimmed = array();
+		foreach ( $rows as $row ) {
+			if ( (int) $row->attachment_id !== $last_attachment_id ) {
+				$trimmed[] = $row;
+			}
+		}
+
+		// If all rows were for the same Attachment, query the next batch of rows for that Attachment.
+		if ( empty( $trimmed ) ) {
+			return $this->query_attachment_rows(
+				$state,
+				array(
+					'attachment_id' => $last_attachment_id,
+				)
+			);
+		}
+
+		return $trimmed;
+	}
+
+	/**
+	 * Queries the Import Source for Attachment to Folder relationships to import.
+	 *
+	 * @param   array $source     Import Source, or Import progress.
+	 * @param   array $args       Query arguments:
+	 *                            after         - read Attachment IDs greater than this;
+	 *                            attachment_id - read only this Attachment's Folders;
+	 *                            limit         - maximum rows to return, zero for no limit.
+	 * @return  array                 Rows of attachment_id and folder_id
+	 */
+	private function query_attachment_rows( $source, $args ) {
 
 		global $wpdb;
 
-		$table_rml = $wpdb->prefix . 'realmedialibrary';
+		$args = wp_parse_args(
+			$args,
+			array(
+				'after'         => 0,
+				'attachment_id' => 0,
+				'limit'         => 0,
+			)
+		);
 
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_rml ) ) ) !== $table_rml ) {
+		$folder_ids = $this->get_queue();
+		if ( empty( $folder_ids ) ) {
+			return array();
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
+
+		if ( $args['attachment_id'] > 0 ) {
+			$comparison  = '=';
+			$compared_to = (int) $args['attachment_id'];
+		} else {
+			$comparison  = '>';
+			$compared_to = (int) $args['after'];
+		}
+
+		$query_args = array_merge( $folder_ids, array( $compared_to ) );
+
+		if ( self::STORAGE_TABLE === $source['storage'] ) {
+			$table  = $this->identifier( $source['table']['relations'] );
+			$object = $this->identifier( $source['table']['relations_object'] );
+			$folder = $this->identifier( $source['table']['relations_folder'] );
+
+			if ( ! $this->table_exists( $table ) ) {
+				return array();
+			}
+
+			$sql = "SELECT {$object} AS attachment_id, {$folder} AS folder_id
+					FROM {$table}
+					WHERE {$folder} IN ({$placeholders})
+					AND {$object} {$comparison} %d
+					ORDER BY {$object} ASC, {$folder} ASC";
+		} else {
+			$sql = "SELECT {$wpdb->term_relationships}.object_id AS attachment_id,
+						   {$wpdb->term_relationships}.term_taxonomy_id AS folder_id
+					FROM {$wpdb->term_relationships}
+					WHERE {$wpdb->term_relationships}.term_taxonomy_id IN ({$placeholders})
+					AND {$wpdb->term_relationships}.object_id {$comparison} %d
+					ORDER BY {$wpdb->term_relationships}.object_id ASC, {$wpdb->term_relationships}.term_taxonomy_id ASC";
+		}
+
+		if ( $args['limit'] > 0 ) {
+			$sql         .= ' LIMIT %d';
+			$query_args[] = (int) $args['limit'];
+		}
+
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $query_args ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Counts the number of Attachments assigned to the Import Source's Folders.
+	 *
+	 * @param   array $source         Import Source.
+	 * @param   array $folder_ids     Source Folder IDs.
+	 * @return  int
+	 */
+	private function count_attachments( $source, $folder_ids ) {
+
+		global $wpdb;
+
+		if ( empty( $folder_ids ) ) {
+			return 0;
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
+
+		if ( self::STORAGE_TABLE === $source['storage'] ) {
+			$table  = $this->identifier( $source['table']['relations'] );
+			$object = $this->identifier( $source['table']['relations_object'] );
+			$folder = $this->identifier( $source['table']['relations_folder'] );
+
+			if ( ! $this->table_exists( $table ) ) {
+				return 0;
+			}
+
+			$sql = "SELECT COUNT(DISTINCT {$object}) FROM {$table} WHERE {$folder} IN ({$placeholders})";
+		} else {
+			$sql = "SELECT COUNT(DISTINCT object_id) FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ({$placeholders})";
+		}
+
+		return (int) $wpdb->get_var( $wpdb->prepare( $sql, $folder_ids ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	}
+
+	/**
+	 * Returns a lookup of Attachment IDs that exist in the Media Library, for the given Attachment IDs.
+	 *
+	 * @param   array $attachment_ids     Attachment IDs.
+	 * @return  array                         Lookup of Attachment IDs that exist
+	 */
+	private function get_existing_attachment_ids( $attachment_ids ) {
+
+		// Bail if there's nothing to check. An empty post__in would match every Attachment.
+		if ( empty( $attachment_ids ) ) {
+			return array();
+		}
+
+		$existing_ids = get_posts(
+			array(
+				'post_type'              => 'attachment',
+				'post_status'            => 'any',
+				'post__in'               => $attachment_ids,
+				'fields'                 => 'ids',
+				'posts_per_page'         => count( $attachment_ids ),
+				'orderby'                => 'none',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$existing = array();
+		foreach ( (array) $existing_ids as $existing_id ) {
+			$existing[ (int) $existing_id ] = true;
+		}
+
+		return $existing;
+	}
+
+	/**
+	 * Queries the Import Source for the given Folders, optionally limited to the given Folder IDs.
+	 *
+	 * @param   array $source     Import Source, or Import progress.
+	 * @param   array $folder_ids Optional Folder IDs to limit the results to.
+	 * @return  array             Folders
+	 */
+	private function query_folders( $source, $folder_ids = array() ) {
+
+		global $wpdb;
+
+		$args = array();
+
+		if ( self::STORAGE_TABLE === $source['storage'] ) {
+			$table  = $this->identifier( $source['table']['folders'] );
+			$id     = $this->identifier( $source['table']['folders_id'] );
+			$name   = $this->identifier( $source['table']['folders_name'] );
+			$parent = $this->identifier( $source['table']['folders_parent'] );
+
+			if ( ! $this->table_exists( $table ) ) {
+				return array();
+			}
+
+			// None of the supported Plugins store a Folder description in their own tables.
+			$sql = "SELECT {$id} AS id, {$name} AS name, {$parent} AS parent, '' AS description
+					FROM {$table}";
+
+			$where = array();
+			if ( ! empty( $source['table']['folders_where'] ) ) {
+				$where[] = $source['table']['folders_where'];
+			}
+			if ( ! empty( $folder_ids ) ) {
+				$where[] = $id . ' IN (' . implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) ) . ')';
+				$args    = $folder_ids;
+			}
+			if ( count( $where ) ) {
+				$sql .= ' WHERE ' . implode( ' AND ', $where );
+			}
+
+			if ( ! empty( $source['table']['folders_orderby'] ) ) {
+				$sql .= ' ORDER BY ' . $source['table']['folders_orderby'];
+			}
+		} else {
+			$taxonomies = array_values( (array) $source['taxonomies'] );
+			if ( empty( $taxonomies ) ) {
+				return array();
+			}
+
+			$sql  = "SELECT child_tt.term_taxonomy_id AS id,
+ 							child_tt.description,
+ 							COALESCE(parent_tt.term_taxonomy_id, 0) AS parent,
+ 							source_terms.name
+ 					FROM {$wpdb->term_taxonomy} AS child_tt
+ 					LEFT JOIN {$wpdb->terms} AS source_terms
+ 					ON child_tt.term_id = source_terms.term_id
+ 					LEFT JOIN {$wpdb->term_taxonomy} AS parent_tt
+ 					ON parent_tt.term_id = child_tt.parent
+ 					AND parent_tt.taxonomy = child_tt.taxonomy
+ 					WHERE child_tt.taxonomy IN (" . implode( ', ', array_fill( 0, count( $taxonomies ), '%s' ) ) . ')';
+			$args = $taxonomies;
+
+			if ( ! empty( $folder_ids ) ) {
+				$sql .= ' AND child_tt.term_taxonomy_id IN (' . implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) ) . ')';
+				$args = array_merge( $args, $folder_ids );
+			}
+		}
+
+		if ( empty( $args ) ) {
+			$rows = $wpdb->get_results( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		} else {
+			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		}
+
+		// Make the Folders associative, so the keys are the Folder IDs.
+		$folders = array();
+		foreach ( (array) $rows as $row ) {
+			$folders[ (int) $row->id ] = $row;
+		}
+
+		return $folders;
+	}
+
+	/**
+	 * Orders the given Folders by their hierarchy, so that parents are always listed before their children.
+	 *
+	 * @param   array $folders Folders, keyed by their source ID.
+	 * @return  array          Folder IDs
+	 */
+	private function order_folders_by_hierarchy( $folders ) {
+
+		$children = array();
+		foreach ( $folders as $folder_id => $folder ) {
+			$parent = (int) $folder->parent;
+
+			if ( $parent <= 0 || $parent === (int) $folder_id || ! isset( $folders[ $parent ] ) ) {
+				$parent = 0;
+			}
+
+			$children[ $parent ][] = (int) $folder_id;
+		}
+
+		$ordered = array();
+		$added   = array();
+		$stack   = isset( $children[0] ) ? array_reverse( $children[0] ) : array();
+
+		while ( ! empty( $stack ) ) {
+			$folder_id = array_pop( $stack );
+
+			if ( isset( $added[ $folder_id ] ) ) {
+				continue;
+			}
+
+			$added[ $folder_id ] = true;
+			$ordered[]           = $folder_id;
+
+			if ( isset( $children[ $folder_id ] ) ) {
+				foreach ( array_reverse( $children[ $folder_id ] ) as $child_id ) {
+					$stack[] = $child_id;
+				}
+			}
+		}
+
+		foreach ( $folders as $folder_id => $folder ) {
+			if ( ! isset( $added[ (int) $folder_id ] ) ) {
+				$ordered[] = (int) $folder_id;
+			}
+		}
+
+		return $ordered;
+	}
+
+	/**
+	 * Resolves the given Import Source name to its storage method and other details.
+	 *
+	 * @param   string $name   Import Source name.
+	 * @param   array  $args   Optional Import arguments, such as the Taxonomies to import.
+	 * @return  WP_Error|array WP_Error | Import Source
+	 */
+	private function resolve_source( $name, $args = array() ) {
+
+		$sources = $this->get_sources();
+
+		if ( ! isset( $sources[ $name ] ) ) {
+			return new WP_Error(
+				'media_library_organizer_import',
+				sprintf(
+					/* translators: %s: Import Source name */
+					__( 'The import source %s is not supported.', 'media-library-organizer' ),
+					$name
+				)
+			);
+		}
+
+		$source = array_merge(
+			array(
+				'label'             => $name,
+				'table'             => array(),
+				'taxonomies'        => array(),
+				'choose_taxonomies' => false,
+			),
+			$sources[ $name ]
+		);
+
+		$source['name']    = $name;
+		$source['storage'] = '';
+
+		if ( ! empty( $source['choose_taxonomies'] ) && ! empty( $args['taxonomies'] ) ) {
+			$source['taxonomies'] = array_values( array_map( 'sanitize_key', (array) $args['taxonomies'] ) );
+		}
+
+		if ( ! empty( $source['table'] ) && $this->table_has_folders( $source['table'] ) ) {
+			$source['storage'] = self::STORAGE_TABLE;
+			return $source;
+		}
+
+		if ( ! empty( $source['taxonomies'] ) && $this->taxonomies_have_terms( $source['taxonomies'] ) ) {
+			$source['storage'] = self::STORAGE_TAXONOMY;
+			return $source;
+		}
+
+		return new WP_Error(
+			'media_library_organizer_import',
+			sprintf(
+				/* translators: %s: Name of the Plugin being imported from */
+				__( 'No folders were found to import from %s.', 'media-library-organizer' ),
+				$source['label']
+			)
+		);
+	}
+
+	/**
+	 * Whether the given table storage descriptor's table exists and holds Folders.
+	 *
+	 * @param   array $table    Table storage descriptor.
+	 * @return  bool
+	 */
+	private function table_has_folders( $table ) {
+
+		global $wpdb;
+
+		$table_name = $this->identifier( $table['folders'] );
+
+		if ( ! $this->table_exists( $table_name ) ) {
 			return false;
 		}
 
-		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_rml} WHERE type = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$sql = "SELECT COUNT(*) FROM {$table_name}";
+		if ( ! empty( $table['folders_where'] ) ) {
+			$sql .= ' WHERE ' . $table['folders_where'];
+		}
 
-		return $count > 0;
+		return (int) $wpdb->get_var( $sql ) > 0; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
-	 * Imports WP Real Media Library (devowl.io) folders into Media Library Organizer.
+	 * Whether any of the given Taxonomies have Terms.
 	 *
-	 * Schema:
-	 *   wp_realmedialibrary      : id, name, parent (int, -1 = root), type (0 = folder), ord
-	 *   wp_realmedialibrary_posts: fid (folder id), attachment (post ID)
-	 *
-	 * @since   2.1.0
-	 *
-	 * @return  WP_Error|bool
+	 * @param   array $taxonomies Taxonomy names.
+	 * @return  bool
 	 */
-	private function import_rml() {
+	private function taxonomies_have_terms( $taxonomies ) {
 
 		global $wpdb;
 
-		$table_rml       = $wpdb->prefix . 'realmedialibrary';
-		$table_rml_posts = $wpdb->prefix . 'realmedialibrary_posts';
+		$taxonomies = array_values( (array) $taxonomies );
+		if ( empty( $taxonomies ) ) {
+			return false;
+		}
 
-		// Fetch regular folders only (type = 0). Root parent is -1 in RML.
-		$folders = $wpdb->get_results(
-			"SELECT id AS term_taxonomy_id,
-			        name,
-			        parent,
-			        '' AS description
-			 FROM {$wpdb->prefix}realmedialibrary
-			 WHERE type = 0
-			 ORDER BY parent ASC, ord ASC" // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$placeholders = implode( ', ', array_fill( 0, count( $taxonomies ), '%s' ) );
+
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->term_taxonomy} WHERE taxonomy IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$taxonomies
+			)
 		);
 
-		if ( empty( $folders ) ) {
-			return new WP_Error(
-				'media_library_organizer_import_rml',
-				__( 'No WP Real Media Library folders were found to import.', 'media-library-organizer' )
-			);
-		}
-
-		$terms = array();
-		foreach ( $folders as $folder ) {
-			$terms[ $folder->term_taxonomy_id ] = $folder;
-		}
-
-		$term_mappings = array();
-		$terms_errors  = array();
-
-		foreach ( $terms as $import_term_id => $import_term ) {
-			$terms_stack = array();
-			$has_parent  = true;
-
-			while ( $has_parent ) {
-				$terms_stack[ $import_term->term_taxonomy_id ] = $import_term;
-
-				// RML uses -1 (or any value not in the table) as the virtual root.
-				if ( (int) $import_term->parent < 0 || ! isset( $terms[ $import_term->parent ] ) ) {
-					$has_parent = false;
-					break;
-				}
-
-				$import_term = $terms[ $import_term->parent ];
-			}
-
-			$terms_stack = array_reverse( $terms_stack );
-
-			foreach ( $terms_stack as $child_term ) {
-				if ( empty( $child_term->name ) ) {
-					continue;
-				}
-
-				if ( isset( $term_mappings[ $child_term->term_taxonomy_id ] ) ) {
-					continue;
-				}
-
-				// Only look up parent MLO ID when the parent is a real (non-root) folder.
-				$parent_mlo_id = '';
-				if ( (int) $child_term->parent >= 0 && isset( $term_mappings[ $child_term->parent ] ) ) {
-					$parent_mlo_id = $term_mappings[ $child_term->parent ];
-				}
-
-				$result = $this->create_term( $child_term->name, $child_term->description, $parent_mlo_id );
-
-				if ( is_wp_error( $result ) ) {
-					$terms_errors[] = sprintf(
-						/* translators: %1$s: Term name to create, %2$s: Error message from attempting to create term */
-						__( 'Term Name: %1$s, Error: %2$s', 'media-library-organizer' ),
-						$child_term->name,
-						$result->get_error_message()
-					);
-					continue;
-				}
-
-				$term_mappings[ $child_term->term_taxonomy_id ] = $result;
-			}
-		}
-
-		if ( empty( $term_mappings ) ) {
-			if ( count( $terms_errors ) ) {
-				return new WP_Error(
-					'media_library_organizer_import_rml',
-					sprintf(
-						/* translators: %s: List of errors */
-						__( 'No Terms were imported, as the following errors were encountered: %s', 'media-library-organizer' ),
-						'<br />' . implode( '<br />', $terms_errors )
-					)
-				);
-			}
-			return new WP_Error(
-				'media_library_organizer_import_rml',
-				__( 'No terms were imported. The source may be empty or incompatible.', 'media-library-organizer' )
-			);
-		}
-
-		// Fetch attachment relationships from RML's posts table.
-		$folder_ids   = array_keys( $term_mappings );
-		$placeholders = implode( ', ', array_fill( 0, count( $folder_ids ), '%d' ) );
-		$attachments  = array();
-
-		// Check if the realmedialibrary_posts table exists before querying.
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_rml_posts ) ) ) === $table_rml_posts ) {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT attachment, fid AS term_taxonomy_id
-					 FROM {$wpdb->prefix}realmedialibrary_posts
-					 WHERE fid IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-					$folder_ids
-				)
-			);
-
-			foreach ( (array) $rows as $row ) {
-				$attachments[ $row->attachment ][] = absint( $row->term_taxonomy_id );
-			}
-		}
-
-		foreach ( $attachments as $attachment_id => $old_folder_ids ) {
-			$term_ids = array();
-			foreach ( $old_folder_ids as $old_folder_id ) {
-				if ( isset( $term_mappings[ $old_folder_id ] ) ) {
-					$term_ids[] = absint( $term_mappings[ $old_folder_id ] );
-				}
-			}
-
-			if ( empty( $term_ids ) ) {
-				continue;
-			}
-
-			$result = wp_set_object_terms( $attachment_id, $term_ids, 'mlo-category', false );
-
-			if ( is_wp_error( $result ) ) {
-				$terms_errors[] = sprintf(
-					/* translators: %1$s: Attachment ID, %2$s: Term IDs, %3$s: Error message */
-					__( 'Attachment ID: %1$s, Term IDs: %2$s, Error: %3$s', 'media-library-organizer' ),
-					$attachment_id,
-					implode( ',', $term_ids ),
-					$result->get_error_message()
-				);
-			}
-		}
-
-		if ( count( $terms_errors ) ) {
-			return new WP_Error(
-				'media_library_organizer_import_rml',
-				sprintf(
-					/* translators: %s: List of errors */
-					__( 'Terms were imported, however some errors were encountered.  They may have no impact on the import, but you\'ll need to check: %s', 'media-library-organizer' ),
-					'<br />' . implode( '<br />', $terms_errors )
-				)
-			);
-		}
-
-		return true;
+		return $count > 0;
 	}
 
 	/**
@@ -874,91 +1382,507 @@ class Media_Library_Organizer_Import {
 	}
 
 	/**
-	 * Returns an array of Term IDs and Names for the given Taxonomy, when the Taxonomy
-	 * might not be registered in WordPress (i.e. it's a Taxonomy registered through
-	 * a third party Plugin that isn't active).
+	 * Returns the Import's progress in the format used by the Import screen.
 	 *
-	 * @since   1.0.0
-	 *
-	 * @param   string $taxonomy   Taxonomy Name.
-	 * @return  mixed               false | array of Taxonomy Term IDs
+	 * @param   array $state    Optional Import progress. Read from the database if omitted.
+	 * @return  array               Status
 	 */
-	private function get_terms( $taxonomy ) {
+	public function get_status( $state = null ) {
 
-		global $wpdb;
+		if ( ! is_array( $state ) ) {
+			$state = $this->get_state();
+		}
 
-		// Get Term data for the given Taxonomy.
-		$terms = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT  {$wpdb->term_taxonomy}.term_taxonomy_id,
-                {$wpdb->term_taxonomy}.description,
-                {$wpdb->term_taxonomy}.parent,
-                {$wpdb->terms}.name 
-                FROM {$wpdb->term_taxonomy}
-                LEFT JOIN {$wpdb->terms}
-                ON {$wpdb->term_taxonomy}.term_id = {$wpdb->terms}.term_id
-                WHERE {$wpdb->term_taxonomy}.taxonomy = %s",
-				$taxonomy
-			)
+		$total     = (int) $state['folders_total'] + (int) $state['attachments_total'];
+		$processed = (int) $state['folder_cursor'] + (int) $state['attachments_processed'];
+
+		if ( 'complete' === $state['status'] ) {
+			$percentage = 100;
+		} elseif ( $total > 0 ) {
+			$percentage = min( 100, (int) round( ( $processed / $total ) * 100 ) );
+		} else {
+			$percentage = 0;
+		}
+
+		return array(
+			'source'         => $state['source'],
+			'status'         => $state['status'],
+			'running'        => $this->is_running_state( $state ),
+			'percentage'     => $percentage,
+			'message'        => $this->get_status_message( $state ),
+			'errors'         => array_values( $state['errors'] ),
+			'failed_batches' => array_values( $state['failed_batches'] ),
 		);
-
-		// If no Terms, bail.
-		if ( empty( $terms ) ) {
-			return false;
-		}
-
-		// Make Terms associative, so the keys are the Term IDs.
-		$terms_assoc = array();
-		foreach ( $terms as $term ) {
-			$terms_assoc[ $term->term_taxonomy_id ] = $term;
-		}
-
-		// Return.
-		return $terms_assoc;
 	}
 
 	/**
-	 * Returns results from _terms_relationships, comprising of Attachment IDs and their
-	 * Taxonomy Term ID, for the given array of Term IDs, when the Taxonomy
-	 * might not be registered in WordPress (i.e. it's a Taxonomy registered through
-	 * a third party Plugin that isn't active).
+	 * Returns a description of what the Import is doing, for display to the user.
 	 *
-	 * @since   1.0.0
-	 *
-	 * @param   array $term_ids   Term IDs.
-	 * @return  array|null        Attachment to Term ID Relationships
+	 * @param   array $state    Import progress.
+	 * @return  string              Message
 	 */
-	private function get_term_relationships( $term_ids ) {
+	private function get_status_message( $state ) {
 
-		global $wpdb;
+		switch ( $state['status'] ) {
+			case 'queued':
+			case 'processing':
+				if ( 'folders' === $state['stage'] ) {
+					return sprintf(
+						/* translators: %1$s: Number of folders imported, %2$s: Total number of folders to import */
+						__( 'Importing folders: %1$s of %2$s.', 'media-library-organizer' ),
+						number_format_i18n( (int) $state['folder_cursor'] ),
+						number_format_i18n( (int) $state['folders_total'] )
+					);
+				}
 
-		$placeholders = implode( ', ', array_fill( 0, count( $term_ids ), '%d' ) );
-		// Get Attachment IDs that have any of the given Term IDs assigned to them.
-		$attachments = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT  {$wpdb->term_relationships}.object_id, {$wpdb->term_relationships}.term_taxonomy_id
-				FROM {$wpdb->term_relationships}
-				WHERE {$wpdb->term_relationships}.term_taxonomy_id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$term_ids
-			)
-		);
+				return sprintf(
+					/* translators: %1$s: Number of attachments assigned to folders, %2$s: Total number of attachments to assign */
+					__( 'Assigning attachments to folders: %1$s of %2$s.', 'media-library-organizer' ),
+					number_format_i18n( (int) $state['attachments_processed'] ),
+					number_format_i18n( (int) $state['attachments_total'] )
+				);
 
-		// If no Attachments, bail.
-		if ( empty( $attachments ) ) {
-			return $attachments;
+			case 'complete':
+				$message = sprintf(
+					/* translators: %1$s: Number of folders imported, %2$s: Number of attachments assigned to folders */
+					__( 'Import complete. %1$s folders and %2$s attachments were processed.', 'media-library-organizer' ),
+					number_format_i18n( (int) $state['folder_cursor'] ),
+					number_format_i18n( (int) $state['attachments_processed'] )
+				);
+
+				if ( (int) $state['attachments_missing'] > 0 ) {
+					$message .= ' ' . sprintf(
+						/* translators: %s: Number of attachments that no longer exist */
+						_n(
+							'%s attachment was skipped, as it no longer exists in the Media Library.',
+							'%s attachments were skipped, as they no longer exist in the Media Library.',
+							(int) $state['attachments_missing'],
+							'media-library-organizer'
+						),
+						number_format_i18n( (int) $state['attachments_missing'] )
+					);
+				}
+
+				return $message;
+
+			case 'cancelled':
+				return __( 'Import cancelled.', 'media-library-organizer' ) . ' ' . __( 'Folders imported so far are kept, and importing again will not duplicate them.', 'media-library-organizer' );
+
+			default:
+				return '';
+		}
+	}
+
+	/**
+	 * Enqueues the JS that starts and monitors Imports on the Import & Export screen.
+	 */
+	public function enqueue_scripts() {
+
+		if ( ! $this->is_import_export_screen() ) {
+			return;
 		}
 
-		// Iterate through results, storing by Attachment ID.
-		$attachments_assoc = array();
-		foreach ( $attachments as $attachment ) {
-			if ( ! isset( $attachments_assoc[ $attachment->object_id ] ) ) {
-				$attachments_assoc[ $attachment->object_id ] = array( absint( $attachment->term_taxonomy_id ) );
-			} else {
-				$attachments_assoc[ $attachment->object_id ][] = absint( $attachment->term_taxonomy_id );
+		// If SCRIPT_DEBUG is enabled, load unminified versions.
+		if ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) {
+			$ext = '';
+		} else {
+			$ext = 'min';
+		}
+
+		wp_enqueue_script(
+			$this->base->plugin->name . '-import',
+			$this->base->plugin->url . 'assets/js/' . ( $ext ? $ext . '/' : '' ) . 'import' . ( $ext ? '-' . $ext : '' ) . '.js',
+			array(),
+			$this->base->plugin->version,
+			true
+		);
+		wp_localize_script(
+			$this->base->plugin->name . '-import',
+			'media_library_organizer_import',
+			array(
+				'nonce'    => wp_create_nonce( 'media-library-organizer-import' ),
+				'interval' => 3000,
+				'status'   => $this->get_status(),
+				'actions'  => array(
+					'start'  => 'media_library_organizer_import_start',
+					'status' => 'media_library_organizer_import_status',
+					'cancel' => 'media_library_organizer_import_cancel',
+				),
+				'strings'  => array(
+					'starting'       => __( 'Starting import...', 'media-library-organizer' ),
+					'cancelling'     => __( 'Cancelling import...', 'media-library-organizer' ),
+					'confirm_cancel' => __( 'Cancel this import?', 'media-library-organizer' ) . ' ' . __( 'Folders imported so far are kept, and importing again will not duplicate them.', 'media-library-organizer' ),
+					'request_failed' => __( 'The site could not be reached, so the state of the import is unknown. Reload this page to check whether it is running.', 'media-library-organizer' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Starts an Import via AJAX.
+	 */
+	public function ajax_start() {
+
+		$this->verify_ajax_request();
+
+		// The nonce is checked by verify_ajax_request(), above.
+		$name = isset( $_POST['source'] ) ? sanitize_key( wp_unslash( $_POST['source'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$args = array();
+
+		// The Import screen sends the Source's own form fields, such as the Taxonomies to
+		// import from Enhanced Media Library.
+		if ( isset( $_POST['args'] ) && is_array( $_POST['args'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$args = map_deep( wp_unslash( $_POST['args'] ), 'sanitize_text_field' ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		}
+
+		$state = $this->start( $name, $args );
+
+		if ( is_wp_error( $state ) ) {
+			wp_send_json_error( $state->get_error_message() );
+		}
+
+		wp_send_json_success( $this->get_status( $state ) );
+	}
+
+	/**
+	 * Returns the Import's progress via AJAX, processing a batch while the user watches.
+	 */
+	public function ajax_status() {
+
+		$this->verify_ajax_request();
+
+		$state = $this->get_state();
+
+		// If the Import is still running, process the next batch.
+		if ( $this->is_running_state( $state ) && ! $this->is_locked() ) {
+			$state = $this->process();
+		}
+
+		wp_send_json_success( $this->get_status( $state ) );
+	}
+
+	/**
+	 * Cancels the Import via AJAX.
+	 */
+	public function ajax_cancel() {
+
+		$this->verify_ajax_request();
+
+		wp_send_json_success( $this->get_status( $this->cancel() ) );
+	}
+
+	/**
+	 * Checks the nonce and capability of an AJAX request, exiting if either fails.
+	 */
+	private function verify_ajax_request() {
+
+		check_ajax_referer( 'media-library-organizer-import', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized.', 'media-library-organizer' ), 401 );
+		}
+	}
+
+	/**
+	 * Whether the current screen is the Plugin's Import & Export screen.
+	 *
+	 * @return  bool
+	 */
+	private function is_import_export_screen() {
+
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+		if ( is_null( $screen ) ) {
+			return false;
+		}
+
+		return ( sanitize_title( $this->base->plugin->displayName ) . '_page_' . $this->base->plugin->name . '-import-export' ) === $screen->id;
+	}
+
+	/**
+	 * Returns the Import's default progress.
+	 *
+	 * @return  array
+	 */
+	private function get_default_state() {
+
+		return array(
+			'status'                => 'idle',
+			'stage'                 => '',
+			'source'                => '',
+			'label'                 => '',
+			'storage'               => '',
+			'table'                 => array(),
+			'taxonomies'            => array(),
+			'started_at'            => 0,
+			'updated_at'            => 0,
+			'folders_total'         => 0,
+			'folder_cursor'         => 0,
+			'attachments_total'     => 0,
+			'attachments_processed' => 0,
+			'attachments_missing'   => 0,
+			'attachment_cursor'     => 0,
+			'batch_attempts'        => array(),
+			'failed_batches'        => array(),
+			'errors'                => array(),
+		);
+	}
+
+	/**
+	 * Stores the Import's progress.
+	 *
+	 * @param   array $state Import progress.
+	 * @return  array        Import progress
+	 */
+	private function save_state( $state ) {
+
+		// If the Import was cancelled, don't overwrite the cancelled state with a new one.
+		// This allows the Import to be resumed later, without losing the cancelled state.
+		if ( 'cancelled' !== $state['status'] ) {
+			$stored = get_option( self::STATE_OPTION );
+
+			if ( is_array( $stored ) && isset( $stored['status'] ) && 'cancelled' === $stored['status'] ) {
+				return array_merge( $this->get_default_state(), $stored );
 			}
 		}
 
-		// Return.
-		return $attachments_assoc;
+		$state['updated_at'] = time();
+
+		update_option( self::STATE_OPTION, $state, false );
+
+		return $state;
+	}
+
+	/**
+	 * Whether the given progress belongs to an Import that still has work to do.
+	 *
+	 * @param   array $state Import progress.
+	 * @return  bool
+	 */
+	public function is_running_state( $state ) {
+
+		return in_array( $state['status'], array( 'queued', 'processing' ), true );
+	}
+
+	/**
+	 * Returns a key identifying the batch the Import is about to process.
+	 *
+	 * @param   array $state Import progress.
+	 * @return  string       Batch key
+	 */
+	private function get_batch_key( $state ) {
+
+		if ( 'folders' === $state['stage'] ) {
+			return 'folders:' . (int) $state['folder_cursor'];
+		}
+
+		return 'attachments:' . (int) $state['attachment_cursor'];
+	}
+
+	/**
+	 * Returns the ordered Folder IDs to import.
+	 *
+	 * @return  array
+	 */
+	private function get_queue() {
+
+		$queue = get_option( self::QUEUE_OPTION, array() );
+
+		return is_array( $queue ) ? $queue : array();
+	}
+
+	/**
+	 * Returns the third party Folder ID to Media Library Organizer Term ID mappings.
+	 *
+	 * @return array
+	 */
+	private function get_mappings() {
+
+		$mappings = get_option( self::MAPPINGS_OPTION, array() );
+
+		return is_array( $mappings ) ? $mappings : array();
+	}
+
+	/**
+	 * Stores the third party Folder ID to Media Library Organizer Term ID mappings.
+	 *
+	 * @param array $mappings Mappings.
+	 */
+	private function save_mappings( $mappings ) {
+
+		update_option( self::MAPPINGS_OPTION, $mappings, false );
+	}
+
+	/**
+	 * Appends an error message, up to the maximum number of errors stored.
+	 *
+	 * @param   array  $errors  Errors.
+	 * @param   string $message Error message.
+	 * @return  array           Errors
+	 */
+	private function add_error( $errors, $message ) {
+
+		if ( count( $errors ) >= self::MAX_ERRORS ) {
+			return $errors;
+		}
+
+		$errors[] = $message;
+
+		return $errors;
+	}
+
+	/**
+	 * Queues the Cron event that processes the next batch.
+	 *
+	 * @return bool Whether an event is queued
+	 */
+	private function schedule_next() {
+
+		if ( wp_next_scheduled( self::CRON_HOOK ) ) {
+			return true;
+		}
+
+		// Schedule the next batch to run immediately, so that the Import can continue even if the user navigates away from the Import screen.
+		return ( false !== wp_schedule_single_event( time(), self::CRON_HOOK ) );
+	}
+
+	/**
+	 * Removes any queued Cron event.
+	 */
+	private function unschedule() {
+
+		wp_clear_scheduled_hook( self::CRON_HOOK );
+	}
+
+	/**
+	 * Claims the right to process batches, taking over a lock left behind by a request that
+	 * died before it could release one.
+	 *
+	 * @return bool Lock acquired
+	 */
+	private function acquire_lock() {
+
+		global $wpdb;
+
+		$claim = time() . ':' . wp_generate_uuid4();
+		$lock  = get_option( self::LOCK_OPTION );
+
+		if ( false === $lock ) {
+			// add_option() inserts the row, and returns false if another request inserted it
+			// first, so exactly one concurrent request can win.
+			if ( ! add_option( self::LOCK_OPTION, $claim, '', false ) ) {
+				return false;
+			}
+
+			$this->lock_claim = $claim;
+
+			return true;
+		}
+
+		// Another request is still working.
+		if ( ! $this->is_lock_stale( $lock ) ) {
+			return false;
+		}
+
+		// The lock is stale, so try to claim it.
+		// This is a direct database query, because the Options API does not support conditional updates.
+		$claimed = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->options,
+			array( 'option_value' => $claim ),
+			array(
+				'option_name'  => self::LOCK_OPTION,
+				'option_value' => (string) $lock,
+			)
+		);
+
+		// The value was written outside of the Options API, so drop its cached copy.
+		wp_cache_delete( self::LOCK_OPTION, 'options' );
+
+		if ( 1 !== (int) $claimed ) {
+			return false;
+		}
+
+		$this->lock_claim = $claim;
+
+		return true;
+	}
+
+	/**
+	 * Whether another request is currently processing batches.
+	 *
+	 * @return  bool
+	 */
+	private function is_locked() {
+
+		$lock = get_option( self::LOCK_OPTION );
+
+		return ( false !== $lock && ! $this->is_lock_stale( $lock ) );
+	}
+
+	/**
+	 * Whether the given lock is stale, meaning that the request that took it has likely died
+	 *
+	 * @param  string $lock Stored lock value.
+	 * @return bool
+	 */
+	private function is_lock_stale( $lock ) {
+
+		$taken_at = (int) strtok( (string) $lock, ':' );
+
+		return ( ( time() - $taken_at ) >= self::LOCK_TIMEOUT );
+	}
+
+	/**
+	 * Releases the lock, if this request still holds it.
+	 */
+	private function release_lock() {
+
+		global $wpdb;
+
+		if ( is_null( $this->lock_claim ) ) {
+			return;
+		}
+
+		$claim            = $this->lock_claim;
+		$this->lock_claim = null;
+
+		// Delete only this request's own claim.
+		$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->options,
+			array(
+				'option_name'  => self::LOCK_OPTION,
+				'option_value' => $claim,
+			)
+		);
+
+		wp_cache_delete( self::LOCK_OPTION, 'options' );
+	}
+
+	/**
+	 * Whether the given database table exists.
+	 *
+	 * @param  string $table  Table name.
+	 * @return bool
+	 */
+	private function table_exists( $table ) {
+
+		global $wpdb;
+
+		return $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table;
+	}
+
+	/**
+	 * Strips anything that isn't valid in an unquoted table or column name, as these can't
+	 * be passed through $wpdb->prepare().
+	 *
+	 * @param  string $identifier Table or column name.
+	 * @return string             Table or column name
+	 */
+	private function identifier( $identifier ) {
+
+		return preg_replace( '/[^a-zA-Z0-9_]/', '', (string) $identifier );
 	}
 }

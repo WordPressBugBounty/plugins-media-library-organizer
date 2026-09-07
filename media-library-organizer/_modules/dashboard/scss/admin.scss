@@ -8,13 +8,7 @@
 * in its own admin.css file.
 */
 
-/**
- * Vars
- */
-$wpzinc-option-label-width: 				140px;
-$wpzinc-vertical-tabbed-ui-width: 			180px;
-$wpzinc-vertical-tabbed-ui-width-mobile: 	60px;
-$wpzinc-border-color: 						#e5e5e5;
+@import "variables";
 
 /**
  * wp_die() Screen
