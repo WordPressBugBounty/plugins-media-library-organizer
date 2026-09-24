@@ -252,16 +252,25 @@ class Media_Library_Organizer_AJAX {
 		$taxonomy_name  = isset( $_REQUEST['taxonomy_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['taxonomy_name'] ) ) : '';
 		$term_name      = isset( $_REQUEST['term_name'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_name'] ) ) : '';
 		$term_parent_id = isset( $_REQUEST['term_parent_id'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['term_parent_id'] ) ) : '';
-		$term_id        = $this->base->get_class( 'taxonomies' )->create_term( $taxonomy_name, $term_name, $term_parent_id );
+
+		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
+		if ( ! $taxonomy ) {
+			wp_send_json_error( __( 'A required field is missing.', 'media-library-organizer' ) );
+		}
+
+		if ( ! current_user_can( $taxonomy->cap->edit_terms ) ) {
+			wp_send_json_error( __( 'Unauthorized', 'media-library-organizer' ) );
+		}
+
+		$term_id = $this->base->get_class( 'taxonomies' )->create_term( $taxonomy_name, $term_name, $term_parent_id );
 
 		// Bail if Term ID is a WP_Error.
 		if ( is_wp_error( $term_id ) ) {
 			wp_send_json_error( $term_id->get_error_message() );
 		}
 
-		// Get Taxonomy and Term.
-		$taxonomy = $this->base->get_class( 'taxonomies' )->get_taxonomy( $taxonomy_name );
-		$term     = get_term_by( 'id', $term_id, $taxonomy_name );
+		// Get Term.
+		$term = get_term_by( 'id', $term_id, $taxonomy_name );
 
 		// Return success with created Term, List View compatible dropdown filter and Grid View Edit Attachment checkbox reflecting changes.
 		wp_send_json_success(

@@ -624,6 +624,10 @@ class Media_Library_Organizer_Rest {
 	 */
 	public function download_folder( WP_REST_Request $request ) {
 
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			wp_send_json_error( __( 'Folder downloads require the PHP ZIP extension. Please ask your hosting provider to enable it.', 'media-library-organizer' ) );
+		}
+
 		$term_id       = sanitize_text_field( $request->get_param( 'term_id' ) );
 		$term_name     = sanitize_text_field( wp_unslash( $request->get_param( 'term_name' ) ) );
 		$taxonomy_name = apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' );

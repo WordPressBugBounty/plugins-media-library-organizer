@@ -1,3 +1,11 @@
+#####   Version 2.1.4 (2026-09-24)
+
+- Fixed folder downloads when the PHP ZIP extension is unavailable.
+- Fixed sidebar settings reverting after you saved changes.
+- Fixed frontend pages that failed while preparing attachment data.
+- Updated dependencies
+- Enhanced Security. Thank you Jashid Sany for responsible disclosure.
+
 #####   Version 2.1.3 (2026-09-07)
 
 - Fixed third-party media-folder imports timing out or stopping partway through by processing large migrations in resumable background batches with progress reporting.

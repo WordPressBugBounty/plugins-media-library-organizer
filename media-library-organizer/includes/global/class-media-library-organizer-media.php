@@ -846,7 +846,7 @@ class Media_Library_Organizer_Media {
 		}
 
 		// Determine the current screen we're on.
-		$screen = get_current_screen();
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 
 		// Bail if we're on the attachment post screen, as this screen outputs
 		// taxonomies form fo correctly.
@@ -1067,7 +1067,7 @@ class Media_Library_Organizer_Media {
 	public function attachment_edit_modal_save_fields( $post, $attachment ) {
 
 		// Determine the current screen we're on.
-		$screen = get_current_screen();
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 
 		// Bail if we're on the attachment post screen, as this screen saves
 		// the taxonomy correctly.
