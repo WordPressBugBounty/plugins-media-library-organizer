@@ -1,3 +1,8 @@
+#####   Version 2.1.5 (2026-09-30)
+
+- Fixed admin pages crashing with older Pro versions.
+- Added AI agent support: let AI assistants read and change your Media Library Organizer folders and settings.
+
 #####   Version 2.1.4 (2026-09-24)
 
 - Fixed folder downloads when the PHP ZIP extension is unavailable.

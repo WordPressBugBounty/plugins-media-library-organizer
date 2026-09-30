@@ -288,7 +288,7 @@ class Media_Library_Organizer_Admin {
 					'title'         => __( 'Saving', 'media-library-organizer' ),
 					'title_success' => __( 'Saved!', 'media-library-organizer' ),
 				),
-				'is_pro'               => function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid(),
+				'is_pro'               => Media_Library_Organizer()->get_class( 'common' )->is_pro_license_valid(),
 				'settings'             => $this->get_settings(),
 				'api'                  => rest_url( $this->base->plugin->namespace ),
 				'rest_nonce'           => wp_create_nonce( 'wp_rest' ),
@@ -865,7 +865,7 @@ class Media_Library_Organizer_Admin {
 		}
 
 		// Bail if Pro is active.
-		if ( function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid() ) {
+		if ( Media_Library_Organizer()->get_class( 'common' )->is_pro_license_valid() ) {
 			return;
 		}
 

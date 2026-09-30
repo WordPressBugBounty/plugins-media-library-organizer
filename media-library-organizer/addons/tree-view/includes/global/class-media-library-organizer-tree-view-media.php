@@ -230,7 +230,7 @@ class Media_Library_Organizer_Tree_View_Media {
 			'folders'    => $this->get_folders(),
 			'taxonomy'   => apply_filters( 'media_library_organizer_tree_view_media_get_tree_view_taxonomy', 'mlo-category' ),
 			'media_view' => Media_Library_Organizer()->get_class( 'common' )->get_media_view(),
-			'is_pro'     => function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid(),
+			'is_pro'     => Media_Library_Organizer()->get_class( 'common' )->is_pro_license_valid(),
 		);
 		$sidebar_settigs = apply_filters( 'media_library_organizer_output_settings', $sidebar_settigs );
 

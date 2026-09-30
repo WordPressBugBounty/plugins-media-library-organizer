@@ -31,7 +31,7 @@ class Media_Library_Organizer_Gallery_Block {
 			return false;
 		}
 
-		return function_exists( 'Media_Library_Organizer_Pro' ) && Media_Library_Organizer_Pro()->check_license_key_valid();
+		return Media_Library_Organizer()->get_class( 'common' )->is_pro_license_valid();
 	}
 
 	/**

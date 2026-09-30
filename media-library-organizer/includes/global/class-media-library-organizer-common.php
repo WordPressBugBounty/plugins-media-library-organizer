@@ -611,6 +611,22 @@ class Media_Library_Organizer_Common {
 	}
 
 	/**
+	 * Determines if Pro is active with a valid license key.
+	 *
+	 * @return  bool    Pro license is valid
+	 */
+	public function is_pro_license_valid() {
+
+		if ( ! function_exists( 'Media_Library_Organizer_Pro' ) ) {
+			return false;
+		}
+
+		$pro = Media_Library_Organizer_Pro();
+
+		return is_object( $pro ) && method_exists( $pro, 'check_license_key_valid' ) && (bool) $pro->check_license_key_valid();
+	}
+
+	/**
 	 * Determines if the WordPress URL is a local, non-web accessible URL.
 	 *
 	 * @since   1.1.0

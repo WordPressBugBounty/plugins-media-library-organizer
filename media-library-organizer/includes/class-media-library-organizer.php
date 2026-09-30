@@ -244,6 +244,7 @@ class Media_Library_Organizer {
 	 */
 	private function initialize_global() {
 
+		$this->classes->abilities    = new Media_Library_Organizer_Abilities( self::$instance );
 		$this->classes->common       = new Media_Library_Organizer_Common( self::$instance );
 		$this->classes->dynamic_tags = new Media_Library_Organizer_Dynamic_Tags( self::$instance );
 		$this->classes->filesystem   = new Media_Library_Organizer_Filesystem( self::$instance );

@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name: Media Library Organizer
  * Plugin URI: https://wpmedialibrary.com
- * Version: 2.1.4
+ * Version: 2.1.5
  * Author: Themeisle
  * License: GPLv2 or later
  * Author URI: https://themeisle.com
@@ -28,7 +28,7 @@ if ( class_exists( 'Media_Library_Organizer' ) ) {
 }
 
 // Define Plugin version and build date.
-define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.4' );
+define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.5' );
 define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_BUILD_DATE', '2022-11-15 18:00:00' );
 
 // Define Plugin paths.
@@ -121,6 +121,26 @@ add_filter(
 		$products[] = __FILE__;
 
 		return $products;
+	}
+);
+add_filter(
+	'media_library_organizer_ai_connect_metadata',
+	function () {
+		return array(
+			'name'           => 'Media Library Organizer',
+			'internal_slug'  => 'mlo',
+			'notice_cases'   => array(
+				__( 'create media folders', 'media-library-organizer' ),
+				__( 'file attachments into folders', 'media-library-organizer' ),
+				__( 'reorder your folder tree', 'media-library-organizer' ),
+			),
+			'prompts'        => array(
+				__( 'Create Media Library Organizer folders for Logos, Product Photos and Blog Images.', 'media-library-organizer' ),
+				__( 'Move every image uploaded this month into my Blog Images folder.', 'media-library-organizer' ),
+				__( 'Delete my empty media folders.', 'media-library-organizer' ),
+			),
+			'ability_prefix' => 'media-organizer',
+		);
 	}
 );
 // Finally, initialize the Plugin.
