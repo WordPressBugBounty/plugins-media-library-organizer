@@ -1,3 +1,9 @@
+#####   Version 2.1.6 (2026-10-22)
+
+- Fixed warning messages when no admin screen is available.
+- Fixed media modal images hiding under the filter toolbar.
+- Updated dependencies
+
 #####   Version 2.1.5 (2026-09-30)
 
 - Fixed admin pages crashing with older Pro versions.

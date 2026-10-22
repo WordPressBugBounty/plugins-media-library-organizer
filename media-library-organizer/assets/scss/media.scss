@@ -166,7 +166,12 @@ table.media {
 .media-frame-content .attachments-browser .media-toolbar-secondary,
 .media-modal-content .attachments-browser .media-toolbar-secondary {
 	padding-bottom: 10px;
-	grid-template-columns: repeat( 4, 1fr ); /* fallback; overridden at runtime by mediaLibraryOrganizerApplyDynamicGridAreas() */
+	grid-template-columns: repeat( 4, minmax( 0, 1fr ) ); /* fallback; overridden at runtime by mediaLibraryOrganizerApplyDynamicGridAreas() */
+
+	// Keep each control within its column.
+	> * {
+		max-width: 100%;
+	}
 }
 
 /**

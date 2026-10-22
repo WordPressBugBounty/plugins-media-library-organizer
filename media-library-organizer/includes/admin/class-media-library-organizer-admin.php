@@ -142,42 +142,14 @@ class Media_Library_Organizer_Admin {
 		$this->base->get_class( 'media' )->register_selectize_js_css( $ext );
 
 		// Get current screen, registered plugin screens and the media view (list or grid).
+		// There is no current screen on the frontend, where page builders load the media editor.
 		$screen  = get_current_screen();
 		$screens = $this->get_screens();
 		$mode    = $this->base->get_class( 'common' )->get_media_view();
 
-		// If we're on the Media screen, enqueue.
-		if ( 'upload' === $screen->id || 'media' === $screen->id ) {
-			// Add New.
-			if ( 'add' === $screen->action ) {
-				$this->enqueue_scripts_css( 'media_add_new', $screen, $screens, $mode, $ext );
-				return;
-			}
-
-			// List or Grid View.
-			$this->enqueue_scripts_css( 'media', $screen, $screens, $mode, $ext );
+		// If we're on a screen belonging to this plugin, enqueue.
+		if ( $screen instanceof WP_Screen && $this->enqueue_scripts_css_for_screen( $screen, $screens, $mode, $ext ) ) {
 			return;
-		}
-
-		// If we're on the Edit Attachment screen, enqueue.
-		if ( 'attachment' === $screen->id ) {
-			$this->enqueue_scripts_css( 'attachment', $screen, $screens, $mode, $ext );
-			return;
-		}
-
-		// If we're on the top level Plugin screen, enqueue.
-		if ( 'toplevel_page_' . $this->base->plugin->name === $screen->base ) {
-			$this->enqueue_scripts_css( 'general', $screen, $screens, $mode, $ext );
-			return;
-		}
-
-		// Iterate through the registered screens, to see if we're viewing that screen.
-		foreach ( $screens as $registered_screen ) {
-			if ( 'media-library-organizer_page_media-library-organizer-' . $registered_screen['name'] === $screen->id ) {
-				// We're on a plugin screen.
-				$this->enqueue_scripts_css( $registered_screen['name'], $screen, $screens, $mode, $ext );
-				return;
-			}
 		}
 
 		// If any page load media-editor, enqueue.
@@ -185,6 +157,56 @@ class Media_Library_Organizer_Admin {
 			$this->enqueue_scripts_css( 'media_editor', $screen, $screens, $mode, $ext );
 			return;
 		}
+	}
+
+	/**
+	 * Enqueues JS and CSS when the given screen belongs to this plugin.
+	 *
+	 * @since   2.1.6
+	 *
+	 * @param   WP_Screen                                         $screen     Current WordPress Screen object.
+	 * @param   array<string, array{name: string, label: string}> $screens    Registered Plugin Screens, keyed by screen name.
+	 * @param   string                                            $mode       Media View Mode (list|grid).
+	 * @param   string                                            $ext        If defined, load minified JS.
+	 * @return  bool                                                          Whether scripts and CSS were enqueued.
+	 */
+	private function enqueue_scripts_css_for_screen( $screen, $screens, $mode, $ext ) {
+
+		// If we're on the Media screen, enqueue.
+		if ( 'upload' === $screen->id || 'media' === $screen->id ) {
+			// Add New.
+			if ( 'add' === $screen->action ) {
+				$this->enqueue_scripts_css( 'media_add_new', $screen, $screens, $mode, $ext );
+				return true;
+			}
+
+			// List or Grid View.
+			$this->enqueue_scripts_css( 'media', $screen, $screens, $mode, $ext );
+			return true;
+		}
+
+		// If we're on the Edit Attachment screen, enqueue.
+		if ( 'attachment' === $screen->id ) {
+			$this->enqueue_scripts_css( 'attachment', $screen, $screens, $mode, $ext );
+			return true;
+		}
+
+		// If we're on the top level Plugin screen, enqueue.
+		if ( 'toplevel_page_' . $this->base->plugin->name === $screen->base ) {
+			$this->enqueue_scripts_css( 'general', $screen, $screens, $mode, $ext );
+			return true;
+		}
+
+		// Iterate through the registered screens, to see if we're viewing that screen.
+		foreach ( $screens as $registered_screen ) {
+			if ( 'media-library-organizer_page_media-library-organizer-' . $registered_screen['name'] === $screen->id ) {
+				// We're on a plugin screen.
+				$this->enqueue_scripts_css( $registered_screen['name'], $screen, $screens, $mode, $ext );
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

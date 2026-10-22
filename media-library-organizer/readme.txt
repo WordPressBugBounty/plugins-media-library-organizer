@@ -4,7 +4,7 @@ Tags: media folders, file manager, media categories, organize files, taxonomy
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 2.1.5
+Stable tag: 2.1.6
 License: GPLv2 or later
 
 Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
@@ -152,6 +152,15 @@ Please follow the reporting protocols outlined on our [Security Page](https://th
 4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.1.6 (2026-10-22)
+
+- Fixed warning messages when no admin screen is available.
+- Fixed media modal images hiding under the filter toolbar.
+- Updated dependencies
+
+
+
 
 #####   Version 2.1.5 (2026-09-30)
 

@@ -799,7 +799,7 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 				},
 
 					/**
-					 * Set attachment wrapper view top to match the height of the toolbar, so attachments
+					 * Keep the attachments offset below the toolbar whenever its height changes, so attachments
 					 * are not cut off.
 					 */
 				createAttachmentsWrapperView: function () {
@@ -807,18 +807,26 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 					// Make sure to load the original attachments wrapper view.
 					AttachmentsBrowser.prototype.createAttachmentsWrapperView.call( this );
 
-					// Set wrapper offset on load.
-					setTimeout(
-						function () {
-							MediaLibraryOrganizerAttachmentsBrowser.attachmentsWrapper.el.style.top = ( MediaLibraryOrganizerAttachmentsBrowser.toolbar.el.clientHeight + 10 ) + 'px';
-						},
-						500
-					);
+					var attachmentsBrowser = this;
 
-					// Update wrapper offset on window resize.
-					window.onresize = function () {
-						MediaLibraryOrganizerAttachmentsBrowser.attachmentsWrapper.el.style.top = ( MediaLibraryOrganizerAttachmentsBrowser.toolbar.el.clientHeight + 10 ) + 'px';
+					// Also fires on first layout, so attachments never render under the toolbar.
+					this.mloToolbarObserver = new ResizeObserver(
+						function () {
+							mediaLibraryOrganizerOffsetAttachments( attachmentsBrowser );
+						}
+					);
+					this.mloToolbarObserver.observe( this.toolbar.el );
+
+				},
+
+				dispose: function () {
+
+					// Unset before WordPress 5.8, which never calls createAttachmentsWrapperView().
+					if ( this.mloToolbarObserver ) {
+						this.mloToolbarObserver.disconnect();
 					}
+
+					return AttachmentsBrowser.prototype.dispose.apply( this, arguments );
 
 				},
 
@@ -826,6 +834,20 @@ function mediaLibraryOrganizerGridViewAddFiltersToToolbar() {
 		);
 
 	} )( jQuery, _ );
+
+}
+
+/**
+ * Grid View: Offset the attachments below the toolbar's current height.
+ *
+ * @param 	{wp.media.view.AttachmentsBrowser} 	attachmentsBrowser 	The attachments browser view.
+ */
+function mediaLibraryOrganizerOffsetAttachments( attachmentsBrowser ) {
+
+	// Core positions the wrapper in "Load more" mode, and the attachments list in infinite scrolling mode.
+	var offsetEl = attachmentsBrowser.$el.hasClass( 'has-load-more' ) ? attachmentsBrowser.attachmentsWrapper.el : attachmentsBrowser.attachments.el;
+
+	offsetEl.style.top = ( attachmentsBrowser.toolbar.el.clientHeight + 10 ) + 'px';
 
 }
 
@@ -865,7 +887,8 @@ function mediaLibraryOrganizerApplyDynamicGridAreas( attachmentsBrowser ) {
 		return;
 	}
 
-	secondaryToolbar.style.gridTemplateColumns = 'repeat(' + columns + ', 1fr)';
+	// minmax(0, …) lets columns shrink below their widest control, so the grid stays inside the toolbar.
+	secondaryToolbar.style.gridTemplateColumns = 'repeat(' + columns + ', minmax(0, 1fr))';
 
 	mloLabels = Array.from( secondaryToolbar.querySelectorAll( 'label[data-mlo-filter="label"]' ) );
 
