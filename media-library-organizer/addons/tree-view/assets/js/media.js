@@ -181,7 +181,8 @@ function mediaLibraryOrganizerTreeViewListInitDraggable() {
 
 	( function ( $ ) {
 
-		$( 'td.title.column-title strong.has-media-icon, td.tree-view-move span.dashicons-move' ).draggable(
+		// The File cell is a <td> before WordPress 7.1 and a <th scope="row"> from 7.1 on, so match by class only.
+		$( '.title.column-title strong.has-media-icon, td.tree-view-move span.dashicons-move' ).draggable(
 			{
 				appendTo: 'body', // Ensure dragging div is above all other elements.
 				revert: true,

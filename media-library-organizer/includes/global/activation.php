@@ -21,8 +21,8 @@ function media_library_organizer_activate( $network_wide ) {
 
 	// Check if we are on a multisite install, activating network wide, or a single install.
 	if ( ! is_multisite() || ! $network_wide ) {
-		// Single Site activation.
-		$media_library_organizer->get_class( 'install' )->install();
+		// Single Site activation: the only path that may redirect to the Media Library.
+		$media_library_organizer->get_class( 'install' )->install( true );
 	} else {
 		// Multisite network wide activation.
 		$sites = get_sites(

@@ -4,7 +4,7 @@ Tags: media folders, file manager, media categories, organize files, taxonomy
 Requires at least: 5.0
 Tested up to: 7.1
 Requires PHP: 5.6
-Stable tag: 2.1.6
+Stable tag: 2.1.7
 License: GPLv2 or later
 
 Create unlimited Media Library folders and subfolders to organize your files. Export Media Library folders, set default attributes & more.
@@ -152,6 +152,15 @@ Please follow the reporting protocols outlined on our [Security Page](https://th
 4. Default attribute settings
 
 == Changelog ==
+
+#####   Version 2.1.7 (2026-11-11)
+
+- Fixed dragging files by title into folders on WordPress 7.1.
+- Fixed redirecting new users to the Media Library after activation.
+- Updated dependencies
+
+
+
 
 #####   Version 2.1.6 (2026-10-22)
 

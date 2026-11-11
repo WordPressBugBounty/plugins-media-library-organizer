@@ -40,8 +40,20 @@ class Media_Library_Organizer_Install {
 	 * Runs the installation routine on the currently active site
 	 *
 	 * @since   1.0.0
+	 *
+	 * @param   bool $flag_redirect  Flag a fresh install for the one-time redirect to the Media Library.
+	 *                               Only a single-site activation passes true; network and new-site
+	 *                               activations must not redirect.
 	 */
-	public function install() {
+	public function install( $flag_redirect = false ) {
+
+		// Flag a fresh single-site install so admin_init can redirect to the Media Library once.
+		// Every other activation clears any flag left over from a recent fresh install.
+		if ( $flag_redirect && ! get_option( $this->base->plugin->name . '-version' ) ) {
+			set_transient( $this->base->plugin->name . '-activation-redirect', 1, 30 );
+		} else {
+			delete_transient( $this->base->plugin->name . '-activation-redirect' );
+		}
 
 		// Update the version number.
 		update_option( $this->base->plugin->name . '-version', $this->base->plugin->version );
@@ -84,6 +96,9 @@ class Media_Library_Organizer_Install {
 	 * @since   1.0.0
 	 */
 	public function uninstall() {
+
+		// A pending first-install redirect must not outlive a deactivation.
+		delete_transient( $this->base->plugin->name . '-activation-redirect' );
 
 		// Discard any queued Import, so that its background process doesn't stay scheduled
 		// once the Plugin is deactivated.

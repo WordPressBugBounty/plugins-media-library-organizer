@@ -1,3 +1,9 @@
+#####   Version 2.1.7 (2026-11-11)
+
+- Fixed dragging files by title into folders on WordPress 7.1.
+- Fixed redirecting new users to the Media Library after activation.
+- Updated dependencies
+
 #####   Version 2.1.6 (2026-10-22)
 
 - Fixed warning messages when no admin screen is available.

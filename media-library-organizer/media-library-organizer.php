@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name: Media Library Organizer
  * Plugin URI: https://wpmedialibrary.com
- * Version: 2.1.6
+ * Version: 2.1.7
  * Author: Themeisle
  * License: GPLv2 or later
  * Author URI: https://themeisle.com
@@ -28,7 +28,7 @@ if ( class_exists( 'Media_Library_Organizer' ) ) {
 }
 
 // Define Plugin version and build date.
-define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.6' );
+define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_VERSION', '2.1.7' );
 define( 'MEDIA_LIBRARY_ORGANIZER_PLUGIN_BUILD_DATE', '2022-11-15 18:00:00' );
 
 // Define Plugin paths.
@@ -100,6 +100,38 @@ if ( version_compare( get_bloginfo( 'version' ), '5.1', '>=' ) ) {
 }
 add_action( 'activate_blog', 'media_library_organizer_activate_new_site' );
 register_deactivation_hook( __FILE__, 'media_library_organizer_deactivate' );
+
+/**
+ * Redirects to the Media Library after a fresh install and activation.
+ *
+ * @since   2.1.6
+ */
+function media_library_organizer_activation_redirect() {
+	if ( ! get_transient( 'media-library-organizer-activation-redirect' ) ) {
+		return;
+	}
+
+	// Leave AJAX, admin-post, action and POST requests untouched: only a plain GET admin page
+	// load by a user who can reach the Media Library may consume the flag.
+	$is_get = isset( $_SERVER['REQUEST_METHOD'] ) && 'GET' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) );
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only detecting the request type; no state change.
+	if ( ! $is_get || wp_doing_ajax() || isset( $_REQUEST['action'] ) || 'admin-post.php' === $GLOBALS['pagenow'] || ! current_user_can( 'upload_files' ) ) {
+		return;
+	}
+
+	delete_transient( 'media-library-organizer-activation-redirect' );
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only detecting a bulk activation to skip the redirect; no state change.
+	if ( isset( $_GET['activate-multi'] ) || is_network_admin() ) {
+		return;
+	}
+
+	// A site may cancel the redirect through the wp_redirect filter; then the page renders as usual.
+	if ( wp_safe_redirect( admin_url( 'upload.php' ) ) ) {
+		exit;
+	}
+}
+add_action( 'admin_init', 'media_library_organizer_activation_redirect' );
 
 /**
  * Main function to return Plugin instance.

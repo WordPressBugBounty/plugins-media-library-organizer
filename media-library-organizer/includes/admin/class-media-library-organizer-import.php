@@ -193,7 +193,7 @@ class Media_Library_Organizer_Import {
 				'data'          => array(
 					'taxonomies' => get_option( 'wpuxss_eml_taxonomies' ),
 				),
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-enhanced-media-library/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-enhanced-media-library', 'import-export' ),
 			);
 		}
 
@@ -203,7 +203,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_filebird',
 				'label'         => __( 'Import from FileBird', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-filebird.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-filebird/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-filebird', 'import-export' ),
 			);
 		}
 
@@ -213,7 +213,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_folders',
 				'label'         => __( 'Import from Folders (Premio)', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-folders.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-folders-premio/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-folders-premio', 'import-export' ),
 			);
 		}
 
@@ -223,7 +223,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_happyfiles',
 				'label'         => __( 'Import from HappyFiles', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-happyfiles.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-happyfiles/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-happyfiles', 'import-export' ),
 			);
 		}
 
@@ -233,7 +233,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_wp_media_folder',
 				'label'         => __( 'Import from WP Media Folder', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-wp-media-folder.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-wp-media-folder/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-wp-media-folder', 'import-export' ),
 			);
 		}
 
@@ -243,7 +243,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_wicked_folders',
 				'label'         => __( 'Import from Wicked Folders', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-wicked-folders.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-wicked-folders/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-wicked-folders', 'import-export' ),
 			);
 		}
 
@@ -253,7 +253,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_mla',
 				'label'         => __( 'Import from Media Library Assistant', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-mla.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-media-library-assistant/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-media-library-assistant', 'import-export' ),
 			);
 		}
 
@@ -263,7 +263,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_mediamatic',
 				'label'         => __( 'Import from Mediamatic', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-mediamatic.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-mediamatic/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-mediamatic', 'import-export' ),
 			);
 		}
 
@@ -273,7 +273,7 @@ class Media_Library_Organizer_Import {
 				'name'          => 'import_rml',
 				'label'         => __( 'Import from WP Real Media Library', 'media-library-organizer' ),
 				'view'          => $this->base->plugin->folder . 'views/admin/import-rml.php',
-				'documentation' => $this->base->plugin->documentation_url . '/import-export/import-from-real-media-library/',
+				'documentation' => tsdk_utmify( 'https://docs.themeisle.com/media-library-organizer/importing-from-other-plugins', 'import-real-media-library', 'import-export' ),
 			);
 		}
 

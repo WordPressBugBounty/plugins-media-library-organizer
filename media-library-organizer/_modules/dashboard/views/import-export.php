@@ -39,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="wrap-inner">
 		<!-- Tabs -->
 		<h2 class="nav-tab-wrapper wpzinc-horizontal-tabbed-ui">
-			<a href="<?php echo esc_url( $this->plugin->documentation_url ); ?>" class="nav-tab last documentation" rel="noopener" target="_blank">
+			<a href="<?php echo esc_url( tsdk_utmify( $this->plugin->documentation_url, 'documentation', 'import-export' ) ); ?>" class="nav-tab last documentation" rel="noopener" target="_blank">
 				<?php esc_html_e( 'Documentation', 'media-library-organizer' ); ?>
 				<span class="dashicons dashicons-admin-page"></span>
 			</a>
