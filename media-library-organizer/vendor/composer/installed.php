@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'codeinwp/media-library-organizer',
-        'pretty_version' => 'v2.1.7',
-        'version' => '2.1.7.0',
-        'reference' => '373c4392fe52cf415fd8092ea3ac680b11e5b6ab',
+        'pretty_version' => 'v2.1.8',
+        'version' => '2.1.8.0',
+        'reference' => '335331d00cf21514f5246a7eab8b0113cf7669ad',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'codeinwp/media-library-organizer' => array(
-            'pretty_version' => 'v2.1.7',
-            'version' => '2.1.7.0',
-            'reference' => '373c4392fe52cf415fd8092ea3ac680b11e5b6ab',
+            'pretty_version' => 'v2.1.8',
+            'version' => '2.1.8.0',
+            'reference' => '335331d00cf21514f5246a7eab8b0113cf7669ad',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

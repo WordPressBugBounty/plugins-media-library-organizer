@@ -1,3 +1,9 @@
+#####   Version 2.1.8 (2026-11-16)
+
+- Fixed the folder sidebar disappearing when a rename failed
+- Enhanced security
+- Updated dependencies
+
 #####   Version 2.1.7 (2026-11-11)
 
 - Fixed dragging files by title into folders on WordPress 7.1.

@@ -18,6 +18,13 @@
 class WPZincDashboardWidget {
 
 	/**
+	 * Maximum uncompressed size of a JSON settings file in a ZIP import.
+	 *
+	 * @var int
+	 */
+	const ZIP_IMPORT_MAX_JSON_BYTES = 5242880;
+
+	/**
 	 * Holds the plugin object
 	 *
 	 * @since   1.0.0
@@ -871,16 +878,14 @@ class WPZincDashboardWidget {
 					return;
 				}
 
-				// Extract and close.
-				$zip->extractTo( sys_get_temp_dir() );
+				// Read the settings file directly from the archive and close.
+				$json = $this->read_json_from_zip( $zip );
 				$zip->close();
 
-				// Read JSON file.
-				// phpcs:disable WordPress.WP.AlternativeFunctions
-				$handle = fopen( sys_get_temp_dir() . '/export.json', 'r' );
-				$json   = fread( $handle, filesize( sys_get_temp_dir() . '/export.json' ) );
-				fclose( $handle );
-				// phpcs:enable
+				if ( is_wp_error( $json ) ) {
+					$this->error_message = $json->get_error_message();
+					return;
+				}
 				break;
 
 			default:
@@ -1010,6 +1015,41 @@ class WPZincDashboardWidget {
 				);
 				break;
 		}
+	}
+
+	/**
+	 * Read the JSON settings file from a ZIP import without extracting the archive.
+	 *
+	 * Supports both the documented export filename and the filename produced by older
+	 * versions of the ZIP exporter.
+	 *
+	 * @param ZipArchive $zip Open ZIP archive.
+	 * @return string|WP_Error
+	 */
+	private function read_json_from_zip( $zip ) {
+
+		$filenames = array( 'export.json', 'export.zip.json' );
+
+		foreach ( $filenames as $filename ) {
+			$index = $zip->locateName( $filename );
+			if ( false === $index ) {
+				continue;
+			}
+
+			$stat = $zip->statIndex( $index );
+			if ( false === $stat || ! isset( $stat['size'] ) || $stat['size'] > self::ZIP_IMPORT_MAX_JSON_BYTES ) {
+				return new WP_Error( 'import_zip_too_large', __( 'The supplied ZIP settings file is too large.', 'media-library-organizer' ) );
+			}
+
+			$json = $zip->getFromIndex( $index, self::ZIP_IMPORT_MAX_JSON_BYTES + 1 );
+			if ( false === $json || strlen( $json ) > self::ZIP_IMPORT_MAX_JSON_BYTES ) {
+				return new WP_Error( 'import_zip_read_failed', __( 'Could not read the supplied ZIP settings file.', 'media-library-organizer' ) );
+			}
+
+			return $json;
+		}
+
+		return new WP_Error( 'import_zip_json_missing', __( 'The supplied ZIP file does not contain a settings file.', 'media-library-organizer' ) );
 	}
 
 	/**
